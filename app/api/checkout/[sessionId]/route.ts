@@ -20,11 +20,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ sessionI
     const total = session.amount_total;
     const currency = session.currency;
     
-    if (paymentIntent && paymentIntent.latest_charge && paymentIntent.latest_charge.receipt_url) {
+    if (paymentIntent && paymentIntent.latest_charge && typeof paymentIntent.latest_charge !== 'string') {
       receiptUrl = paymentIntent.latest_charge.receipt_url;
     }
 
-    return NextResponse.json({ success: true, receiptUrl, lineItems, total, currency });
+    const customerName = session.customer_details?.name || 'Valued Customer';
+    const customerEmail = session.customer_details?.email || 'No email provided';
+    const transactionId = paymentIntent?.id || session.id;
+
+    return NextResponse.json({ success: true, receiptUrl, lineItems, total, currency, customerName, customerEmail, transactionId });
   } catch (error: any) {
     console.error("Error retrieving Stripe session:", error);
     return NextResponse.json({ success: false, error: 'Failed to retrieve secure session' }, { status: 500 });
