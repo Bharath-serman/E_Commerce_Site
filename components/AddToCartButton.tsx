@@ -27,11 +27,11 @@ export default function AddToCartButton({ product }: { product: ProductProps }) 
   };
 
   return (
-    <button 
+    <button
       onClick={handleAdd}
       className={`w-full ${added ? 'bg-green-600 text-white' : 'bg-white border border-zinc-900 text-zinc-900 hover:bg-zinc-100'} px-8 py-4 rounded-sm transition-colors duration-300 text-xs tracking-[0.2em] uppercase font-bold`}
     >
-      {added ? 'Added to Cart ✓' : 'Add to Basket'}
+      {added ? 'Added to Cart ✓' : 'Add to Cart'}
     </button>
   );
 }

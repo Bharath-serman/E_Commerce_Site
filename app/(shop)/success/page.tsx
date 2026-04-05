@@ -29,6 +29,20 @@ function SuccessContent() {
         .then(data => {
           if (data.success) {
             setOrderDetails(data);
+            
+            // Sync with our database
+            fetch('/api/orders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                stripeSessionId: sessionId,
+                transactionId: data.transactionId,
+                customerName: data.customerName,
+                customerEmail: data.customerEmail, 
+                items: data.lineItems,
+                totalAmount: data.total / 100
+              })
+            }).catch(err => console.error("Database sync failed:", err));
           }
         })
         .catch(console.error)
@@ -63,9 +77,20 @@ function SuccessContent() {
             </div>
           ) : orderDetails ? (
             <div className="w-full">
-              <div className="flex justify-between items-end mb-8 border-b border-zinc-100 pb-4">
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Order Summary</span>
-                <span className="text-xs text-zinc-400 font-mono">#{sessionId?.slice(-8).toUpperCase()}</span>
+              <div className="flex flex-col gap-6 mb-10 pb-6 border-b border-zinc-100">
+                <div className="flex justify-between items-end">
+                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Transaction ID</span>
+                  <span className="text-[10px] text-black font-mono font-bold bg-zinc-50 px-2 py-1 border border-zinc-100 rounded-sm">
+                    {orderDetails.transactionId}
+                  </span>
+                </div>
+                <div className="flex justify-between items-end">
+                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Order Summary</span>
+                  <span className="text-xs text-zinc-400 font-mono italic flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                    SECURE SESSION ACTIVE
+                  </span>
+                </div>
               </div>
 
               <div className="space-y-6">

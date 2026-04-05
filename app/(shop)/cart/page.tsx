@@ -10,10 +10,10 @@ export default function CartPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-16 lg:px-8 w-full min-h-[calc(100vh-16rem)] flex flex-col">
       <h1 className="text-4xl font-playfair font-medium text-zinc-900 tracking-tight mb-12">Shopping Cart</h1>
-      
+
       {items.length === 0 ? (
         <div className="flex-grow flex flex-col items-center pt-20">
-          <p className="text-zinc-500 mb-8 font-light text-lg">Your basket is currently empty.</p>
+          <p className="text-zinc-500 mb-8 font-light text-lg">Your Cart is currently empty.</p>
           <Link href="/" className="bg-zinc-900 text-white px-8 py-4 rounded-sm hover:bg-black transition-colors duration-300 text-xs tracking-[0.2em] uppercase font-bold">
             Continue Shopping
           </Link>
@@ -51,7 +51,7 @@ export default function CartPage() {
               ))}
             </div>
           </div>
-          
+
           {/* Order Summary */}
           <div className="lg:col-span-4">
             <div className="bg-zinc-50 rounded-sm p-8 border border-zinc-200 sticky top-28">
@@ -70,7 +70,7 @@ export default function CartPage() {
                 <span className="text-base font-medium text-zinc-900">Total</span>
                 <span className="text-xl font-medium text-zinc-900">${totalPrice.toFixed(2)}</span>
               </div>
-              
+
               <CheckoutButton isCart />
             </div>
           </div>
