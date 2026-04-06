@@ -8,19 +8,19 @@ export default function ManageProducts() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  
+
   // Modal & Status State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  
-  const [status, setStatus] = useState<{isOpen: boolean, type: 'success' | 'error', title: string, message: string}>({
+
+  const [status, setStatus] = useState<{ isOpen: boolean, type: 'success' | 'error', title: string, message: string }>({
     isOpen: false,
     type: 'success',
     title: '',
     message: ''
   });
-  
+
   // Form State
   const [formData, setFormData] = useState({
     name: '',
@@ -51,7 +51,7 @@ export default function ManageProducts() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    
+
     try {
       const productData = {
         ...formData,
@@ -103,7 +103,7 @@ export default function ManageProducts() {
   const confirmDelete = async () => {
     if (!productToDelete) return;
     setIsDeleting(true);
-    
+
     try {
       const res = await fetch(`/api/products/${productToDelete}`, { method: 'DELETE' });
       const data = await res.json();
@@ -143,7 +143,7 @@ export default function ManageProducts() {
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-playfair font-medium text-zinc-900 tracking-tight">Inventory Management</h1>
-          <p className="text-zinc-500 mt-2 text-sm font-light uppercase tracking-widest">CONTROL YOUR STOREFRONT ITEMS</p>
+          <p className="text-zinc-500 mt-2 text-sm font-light uppercase tracking-widest">MANAGE YOUR STOREFRONT ITEMS</p>
         </div>
       </div>
 
@@ -156,34 +156,34 @@ export default function ManageProducts() {
           <div className="space-y-6">
             <div>
               <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Product Name</label>
-              <input 
+              <input
                 required
-                type="text" 
+                type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
                 placeholder="e.g. Classic Silk Scarf"
               />
             </div>
             <div>
               <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Price (USD)</label>
-              <input 
+              <input
                 required
-                type="number" 
+                type="number"
                 step="0.01"
                 value={formData.price}
-                onChange={(e) => setFormData({...formData, price: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
                 placeholder="0.00"
               />
             </div>
             <div>
               <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Image URL</label>
-              <input 
+              <input
                 required
-                type="text" 
+                type="text"
                 value={formData.image}
-                onChange={(e) => setFormData({...formData, image: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                 className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
                 placeholder="https://images.unsplash.com/..."
               />
@@ -192,25 +192,25 @@ export default function ManageProducts() {
           <div className="space-y-6">
             <div>
               <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Description</label>
-              <textarea 
+              <textarea
                 required
                 value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50 h-32 resize-none"
                 placeholder="Enter a premium description..."
               />
             </div>
             <div>
               <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Product Details (Comma Separated)</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={formData.details}
-                onChange={(e) => setFormData({...formData, details: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, details: e.target.value })}
                 className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
                 placeholder="100% Silk, Hand-wash only, Made in Italy"
               />
             </div>
-            <button 
+            <button
               disabled={submitting}
               type="submit"
               className="w-full bg-black text-white py-4 text-xs font-bold uppercase tracking-[0.2em] rounded-sm hover:bg-zinc-800 transition-all shadow-lg disabled:bg-zinc-300"
@@ -226,7 +226,7 @@ export default function ManageProducts() {
         <h2 className="text-lg font-bold text-zinc-900 uppercase tracking-widest border-b border-zinc-100 pb-4">
           Current Inventory ({products.length})
         </h2>
-        
+
         <div className="bg-white rounded-sm border border-zinc-200 overflow-hidden shadow-sm">
           <table className="min-w-full divide-y divide-zinc-200">
             <thead className="bg-zinc-50">
@@ -261,7 +261,7 @@ export default function ManageProducts() {
                     ${product.price.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right pr-10">
-                    <button 
+                    <button
                       onClick={() => handleDelete(product._id)}
                       className="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors bg-red-50 px-3 py-2 rounded-sm border border-red-100"
                     >
@@ -276,7 +276,7 @@ export default function ManageProducts() {
       </section>
 
       {/* Custom Global Modal */}
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
@@ -287,7 +287,7 @@ export default function ManageProducts() {
       />
 
       {/* Custom Status Modal (Success/Error) */}
-      <StatusModal 
+      <StatusModal
         isOpen={status.isOpen}
         onClose={() => setStatus({ ...status, isOpen: false })}
         type={status.type}
