@@ -116,6 +116,23 @@ function SuccessContent() {
                   <span className="uppercase tracking-widest">Total Paid</span>
                   <span>${(orderDetails.total / 100).toFixed(2)}</span>
                 </div>
+                
+                {orderDetails.metadata?.discountApplied && orderDetails.metadata.discountApplied !== 'none' && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-green-800">Discount Applied</span>
+                      <span className="text-sm font-bold text-green-600">{orderDetails.metadata.discountApplied}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-sm text-green-700">Original Total</span>
+                      <span className="text-sm font-medium">${orderDetails.metadata.originalTotal ? (parseFloat(orderDetails.metadata.originalTotal) / 100).toFixed(2) : '0.00'}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-green-700">Discount Amount</span>
+                      <span className="text-sm font-medium text-green-600">-${orderDetails.metadata.discountAmount ? (parseFloat(orderDetails.metadata.discountAmount) / 100).toFixed(2) : '0.00'}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mt-12 flex flex-col sm:flex-row gap-4 items-center">

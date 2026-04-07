@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { connectMongo } from '@/lib/mongodb';
 import Product from '@/models/Product';
+import VideoBackground from '@/components/VideoBackground';
+import SaleBanner from '@/components/SaleBanner';
+import DiscountBadge from '@/components/DiscountBadge';
 
 // Hybrid DB / Mock fetch
 async function getProducts() {
@@ -28,36 +31,76 @@ async function getProducts() {
   ];
 }
 
+async function getActiveSales() {
+  try {
+    const { connectMongo } = await import('@/lib/mongodb');
+    const { default: Sale } = await import('@/models/Sale');
+    
+    await connectMongo();
+    const sales = await Sale.find({ isActive: true }).sort({ priority: -1, createdAt: -1 }).lean();
+    
+    return sales.filter((sale: any) => 
+      new Date() >= new Date(sale.startDate) && 
+      new Date() <= new Date(sale.endDate)
+    );
+  } catch (error) {
+    console.error("Error fetching sales:", error);
+    return [];
+  }
+}
+
 export default async function HomePage() {
   const products = await getProducts();
+  const activeSales = await getActiveSales();
 
   return (
     <main className="w-full flex-grow flex flex-col">
-      {/* Video Hero Section */}
-      <section className="relative w-full h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-black">
-        <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-60 z-0">
-          <source src="https://videos.pexels.com/video-files/3205917/3205917-uhd_2560_1440_25fps.mp4" type="video/mp4" />
-        </video>
-        
-        <div className="relative z-10 flex flex-col items-center text-center px-4 max-w-4xl mx-auto">
-          <h1 className="text-5xl md:text-7xl lg:text-8xl text-white font-playfair font-medium tracking-tight mb-8">
-            Elevate Your Everyday
-          </h1>
-          <p className="text-lg md:text-xl text-zinc-200 font-light mb-10 max-w-2xl">
-            Discover a curated collection of premium essentials designed for the modern lifestyle.
-          </p>
-          <div className="flex gap-4 flex-col sm:flex-row">
-            <Link href="#collection" className="bg-white text-black px-10 py-4 text-xs tracking-[0.2em] uppercase font-bold hover:bg-zinc-200 transition-colors rounded-sm shadow-xl">
-              Explore Collection
-            </Link>
+      {/* Sale Banner - Show if there are active sales */}
+      {activeSales.length > 0 && (
+        <section>
+          {activeSales.map((sale) => (
+            <SaleBanner key={sale._id} sale={sale} />
+          ))}
+        </section>
+      )}
+
+      {/* Enhanced 4K Video Hero Section */}
+      <section className="relative w-full h-screen min-h-[800px] flex items-center justify-center overflow-hidden">
+        <VideoBackground 
+          videoSrc="/videos/background.mp4"
+          className="w-full h-full"
+        >
+          <div className="flex flex-col items-center text-center px-4 max-w-5xl mx-auto transform transition-all duration-700 ease-out">
+            <h1 className="text-6xl md:text-8xl lg:text-9xl text-white font-playfair font-medium tracking-tight mb-8 leading-tight transform hover:scale-105 transition-transform duration-500">
+              Elevate Your Everyday
+            </h1>
+            <p className="text-xl md:text-2xl lg:text-3xl text-zinc-100 font-light mb-12 max-w-3xl leading-relaxed">
+              Discover a curated collection of premium essentials designed for the modern lifestyle.
+            </p>
+            <div className="flex gap-6 flex-col sm:flex-row items-center">
+              <Link 
+                href="#collection" 
+                className="bg-white text-black px-12 py-5 text-sm tracking-[0.3em] uppercase font-bold hover:bg-zinc-100 transition-all duration-300 rounded-sm shadow-2xl hover:shadow-3xl hover:scale-105 transform"
+              >
+                Explore Collection
+              </Link>
+              <Link 
+                href="/search" 
+                className="border-2 border-white text-white px-12 py-5 text-sm tracking-[0.3em] uppercase font-bold hover:bg-white hover:text-black transition-all duration-300 rounded-sm hover:scale-105 transform"
+              >
+                View All Products
+              </Link>
+            </div>
           </div>
-        </div>
+        </VideoBackground>
       </section>
 
       {/* Featured Products Grid */}
       <section id="collection" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 w-full">
         <div className="flex justify-between items-end mb-16">
-          <h2 className="text-4xl text-zinc-900 font-playfair font-medium tracking-tight">Trending Now</h2>
+          <h2 className="text-4xl text-zinc-900 font-playfair font-medium tracking-tight">
+            {activeSales.length > 0 ? 'Sale Items' : 'Trending Now'}
+          </h2>
           <Link href="/search" className="text-sm font-semibold uppercase tracking-widest text-zinc-500 hover:text-black transition-colors border-b border-transparent hover:border-black pb-1">
             View All
           </Link>
@@ -68,6 +111,7 @@ export default async function HomePage() {
             <Link href={`/product/${product._id}`} key={product._id} className="group block">
               <div className="relative w-full aspect-[4/5] bg-zinc-100 rounded-sm overflow-hidden border border-zinc-200 shadow-sm transition-shadow hover:shadow-xl">
                 <img src={product.image} alt={product.name} className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]" />
+                <DiscountBadge productName={product.name} price={product.price} />
               </div>
               <div className="mt-6 flex justify-between items-center text-zinc-900">
                 <h3 className="text-sm uppercase tracking-wider font-semibold">{product.name}</h3>

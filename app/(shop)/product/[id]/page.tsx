@@ -3,6 +3,7 @@ import AddToCartButton from '@/components/AddToCartButton';
 import { connectMongo } from '@/lib/mongodb';
 import Product from '@/models/Product';
 import { notFound } from 'next/navigation';
+import DiscountBadge from '@/components/DiscountBadge';
 
 // Hybrid DB / Mock fetch
 const getProduct = async (id: string) => {
@@ -75,10 +76,16 @@ export default async function ProductPage({ params }: { params: { id: string } }
       
       {/* Product Information */}
       <div className="mt-10 lg:mt-0 flex flex-col justify-center">
-        <h1 className="text-4xl lg:text-5xl font-playfair font-medium text-zinc-900 tracking-tight">{product.name}</h1>
+        <div className="relative">
+          <h1 className="text-4xl lg:text-5xl font-playfair font-medium text-zinc-900 tracking-tight">{product.name}</h1>
+          
+          <DiscountBadge productName={product.name} price={product.price} />
+        </div>
         
         <div className="mt-4">
-          <p className="text-2xl font-light text-zinc-900">${product.price}</p>
+          <div className="flex items-center gap-4">
+            <p className="text-2xl font-light text-zinc-900">${product.price}</p>
+          </div>
         </div>
         
         <div className="mt-8">

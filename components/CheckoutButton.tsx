@@ -11,10 +11,11 @@ interface CheckoutButtonProps {
     price: number;
     image: string;
   };
-  isCart?: boolean; // If true, uses all items in the cart
+  isCart?: boolean; // If true, uses all items in cart
+  discountCode?: string; // Optional discount code
 }
 
-export default function CheckoutButton({ productId, product, isCart = false }: CheckoutButtonProps) {
+export default function CheckoutButton({ productId, product, isCart = false, discountCode }: CheckoutButtonProps) {
   const [loading, setLoading] = useState(false);
   const { items } = useCart();
 
@@ -37,7 +38,7 @@ export default function CheckoutButton({ productId, product, isCart = false }: C
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: checkoutItems }),
+        body: JSON.stringify({ items: checkoutItems, discountCode }),
       });
 
       const data = await response.json();
