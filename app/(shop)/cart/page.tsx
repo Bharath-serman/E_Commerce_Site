@@ -5,7 +5,7 @@ import Link from 'next/link';
 import CheckoutButton from '@/components/CheckoutButton';
 
 export default function CartPage() {
-  const { items, removeFromCart, updateQuantity, totalPrice } = useCart();
+  const { items, removeFromCart, updateQuantity, totalPrice, discountedItems, totalDiscount, discountedTotal } = useCart();
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-16 lg:px-8 w-full min-h-[calc(100vh-16rem)] flex flex-col">
@@ -23,18 +23,38 @@ export default function CartPage() {
           {/* Cart Items */}
           <div className="lg:col-span-8">
             <div className="divide-y divide-zinc-200 border-t border-zinc-200">
-              {items.map((item) => (
+              {items.map((item) => {
+                const discountedItem = discountedItems.find(d => d.name === item.name);
+                return (
                 <div key={item.id} className="py-8 flex gap-6">
-                  <div className="aspect-[4/5] w-24 sm:w-32 flex-shrink-0 bg-zinc-100 rounded-sm overflow-hidden">
+                  <div className="aspect-[4/5] w-24 sm:w-32 flex-shrink-0 bg-zinc-100 rounded-sm overflow-hidden relative">
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                    {discountedItem && discountedItem.discount && (
+                      <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-sm text-xs font-bold">
+                        {discountedItem.discount.type === 'percentage' 
+                          ? `${discountedItem.discount.value}% OFF` 
+                          : `$${discountedItem.discount.value} OFF`}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col justify-between flex-grow">
                     <div className="flex justify-between">
                       <div>
                         <h3 className="text-base text-zinc-900 font-medium">{item.name}</h3>
-                        <p className="mt-1 text-sm text-zinc-500">${item.price}</p>
+                        <div className="flex items-center gap-2">
+                          <p className={`mt-1 text-sm ${discountedItem ? 'text-zinc-400 line-through' : 'text-zinc-500'}`}>
+                            ${item.price}
+                          </p>
+                          {discountedItem && (
+                            <p className="mt-1 text-sm text-green-600 font-medium">
+                              ${discountedItem.discountedPrice.toFixed(2)}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-base font-medium text-zinc-900">${(item.price * item.quantity).toFixed(2)}</p>
+                      <p className="text-base font-medium text-zinc-900">
+                        {((discountedItem ? discountedItem.discountedPrice : item.price) * item.quantity).toFixed(2)}
+                      </p>
                     </div>
                     <div className="flex justify-between items-end">
                       <div className="flex items-center border border-zinc-300 rounded-sm">
@@ -48,7 +68,8 @@ export default function CartPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              )
+            })}
             </div>
           </div>
 
@@ -61,6 +82,12 @@ export default function CartPage() {
                   <span>Subtotal</span>
                   <span className="font-medium text-zinc-900">${totalPrice.toFixed(2)}</span>
                 </div>
+                {totalDiscount > 0 && (
+                  <div className="flex justify-between">
+                    <span>Discount Applied</span>
+                    <span className="font-medium text-green-600">-${totalDiscount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span>Shipping</span>
                   <span className="font-medium text-zinc-900">Calculated at checkout</span>
@@ -68,7 +95,7 @@ export default function CartPage() {
               </div>
               <div className="border-t border-zinc-200 pt-6 mb-8 flex justify-between items-center">
                 <span className="text-base font-medium text-zinc-900">Total</span>
-                <span className="text-xl font-medium text-zinc-900">${totalPrice.toFixed(2)}</span>
+                <span className="text-xl font-medium text-zinc-900">${discountedTotal.toFixed(2)}</span>
               </div>
 
               <CheckoutButton isCart />
