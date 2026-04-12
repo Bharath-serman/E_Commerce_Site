@@ -7,76 +7,34 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder'
 
 export async function POST(req: Request) {
   try {
-    const { items, discountCode } = await req.json();
+    const { items } = await req.json();
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
     if (!items || items.length === 0) {
       return NextResponse.json({ error: "No items in cart" }, { status: 400 });
     }
 
-    // Apply discount if provided
+    // Apply sale discounts automatically
     let discountAmount = 0;
-    let appliedDiscount = null;
+    let discountResult: any = null;
+    let appliedDiscounts: any[] = [];
     
-    if (discountCode) {
-      try {
-        const discountsRes = await fetch(`${baseUrl}/api/discounts`);
-        const discountsData = await discountsRes.json();
-        
-        if (discountsData.success) {
-          const discount = discountsData.data.find((d: any) => 
-            d.isActive && 
-            new Date() >= new Date(d.startDate) && 
-            new Date() <= new Date(d.endDate) &&
-            d.usageLimit && d.usedCount < d.usageLimit
-          );
-          
-          if (discount) {
-            const cartTotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-            
-            // Check if discount applies to all items or specific items
-            const applicableItems = items.filter((item: any) => 
-              discount.applicableProducts.length === 0 || 
-              discount.applicableProducts.includes(item.name)
-            );
-            
-            if (applicableItems.length > 0) {
-              if (discount.minOrderValue && cartTotal < discount.minOrderValue) {
-                return NextResponse.json({ error: `Minimum order value of $${discount.minOrderValue} required` }, { status: 400 });
-              }
-              
-              appliedDiscount = discount;
-              discountAmount = applicableItems.reduce((sum: number, item: any) => {
-                const itemTotal = item.price * item.quantity;
-                if (discount.type === 'percentage') {
-                  return sum + (itemTotal * discount.value / 100);
-                } else {
-                  return sum + Math.min(discount.value, itemTotal);
-                }
-              }, 0);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error applying discount:', error);
-      }
+    try {
+      const { SaleDiscountService } = await import('@/lib/saleDiscountService');
+      discountResult = await SaleDiscountService.calculateCartDiscount(items);
+      discountAmount = discountResult.totalDiscount;
+      appliedDiscounts = discountResult.discountedItems
+        .filter((item: any) => item.discount)
+        .map((item: any) => item.discount);
+    } catch (error) {
+      console.error('Error applying sale discounts:', error);
     }
 
     const line_items = items.map((item: any) => {
-      let finalPrice = item.price;
-      
-      if (appliedDiscount) {
-        const isApplicable = appliedDiscount.applicableProducts.length === 0 || 
-                         appliedDiscount.applicableProducts.includes(item.name);
-        
-        if (isApplicable) {
-          if (appliedDiscount.type === 'percentage') {
-            finalPrice = item.price * (1 - appliedDiscount.value / 100);
-          } else {
-            finalPrice = Math.max(0, item.price - appliedDiscount.value);
-          }
-        }
-      }
+      // Find the discounted price for this item
+      const discountedItem = discountResult?.discountedItems.find((d: any) => d.id === item.id);
+      const finalPrice = discountedItem ? discountedItem.discountedPrice : item.price;
+      const itemDiscount = discountedItem?.discount;
       
       return {
         price_data: {
@@ -84,7 +42,7 @@ export async function POST(req: Request) {
           product_data: { 
             name: item.name,
             images: [item.image],
-            description: appliedDiscount ? `Discount applied: ${appliedDiscount.name}` : undefined,
+            description: itemDiscount ? `Sale discount applied: ${itemDiscount.discountValue}% OFF` : undefined,
           },
           unit_amount: Math.round(finalPrice * 100), // Stripe expects cents
         },
@@ -99,17 +57,10 @@ export async function POST(req: Request) {
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/cart`,
       metadata: {
-        discountApplied: appliedDiscount ? appliedDiscount.name : 'none',
-        discountAmount: appliedDiscount ? discountAmount.toString() : '0',
+        discountApplied: appliedDiscounts.length > 0 ? appliedDiscounts.map((d: any) => d.title).join(', ') : 'none',
+        discountAmount: discountAmount.toString(),
         originalTotal: items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0).toString(),
-        discountedTotal: items.reduce((sum: number, item: any) => {
-          const finalPrice = appliedDiscount ? 
-            (appliedDiscount.applicableProducts.length === 0 || appliedDiscount.applicableProducts.includes(item.name)) ?
-              (appliedDiscount.type === 'percentage' ? item.price * (1 - appliedDiscount.value / 100) : Math.max(0, item.price - appliedDiscount.value))
-            : item.price
-          : item.price;
-          return sum + (finalPrice * item.quantity);
-        }, 0).toString()
+        discountedTotal: discountResult ? discountResult.discountedItems.reduce((sum: number, item: any) => sum + (item.discountedPrice * item.quantity), 0).toString() : items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0).toString()
       }
     });
 

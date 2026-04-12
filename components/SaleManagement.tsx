@@ -20,8 +20,12 @@ export default function SaleManagement() {
     backgroundColor: '#000000',
     textColor: '#ffffff',
     showCountdown: true,
-    priority: 0
+    priority: 0,
+    applicableCategories: [] as string[],
+    applicableProducts: [] as string[]
   });
+  const [categories, setCategories] = useState<string[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
 
   const fetchSales = async () => {
     try {
@@ -37,8 +41,31 @@ export default function SaleManagement() {
     }
   };
 
+  const fetchCategoriesAndProducts = async () => {
+    try {
+      const [categoriesRes, productsRes] = await Promise.all([
+        fetch('/api/categories'),
+        fetch('/api/products')
+      ]);
+      
+      const categoriesData = await categoriesRes.json();
+      const productsData = await productsRes.json();
+      
+      if (categoriesData.success) {
+        setCategories(categoriesData.data);
+      }
+      
+      if (productsData.success) {
+        setProducts(productsData.data);
+      }
+    } catch (error) {
+      console.error('Error fetching categories and products:', error);
+    }
+  };
+
   useEffect(() => {
     fetchSales();
+    fetchCategoriesAndProducts();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,7 +116,9 @@ export default function SaleManagement() {
       backgroundColor: sale.backgroundColor || '#000000',
       textColor: sale.textColor || '#ffffff',
       showCountdown: sale.showCountdown,
-      priority: sale.priority
+      priority: sale.priority,
+      applicableCategories: sale.applicableCategories || [],
+      applicableProducts: sale.applicableProducts || []
     });
     setShowForm(true);
   };
@@ -121,7 +150,9 @@ export default function SaleManagement() {
       backgroundColor: '#000000',
       textColor: '#ffffff',
       showCountdown: true,
-      priority: 0
+      priority: 0,
+      applicableCategories: [],
+      applicableProducts: []
     });
   };
 
@@ -228,6 +259,72 @@ export default function SaleManagement() {
                 className="w-full border border-zinc-200 px-3 py-2 text-sm rounded-sm focus:outline-none focus:border-black"
               />
             </div>
+
+            {formData.discountType === 'category' && (
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">
+                  Applicable Categories
+                </label>
+                <div className="space-y-2 max-h-32 overflow-y-auto border border-zinc-200 rounded-sm p-2">
+                  {categories.map(category => (
+                    <label key={category} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.applicableCategories.includes(category)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData({
+                              ...formData,
+                              applicableCategories: [...formData.applicableCategories, category]
+                            });
+                          } else {
+                            setFormData({
+                              ...formData,
+                              applicableCategories: formData.applicableCategories.filter(c => c !== category)
+                            });
+                          }
+                        }}
+                        className="rounded-sm border-zinc-300"
+                      />
+                      <span className="text-sm text-zinc-700">{category}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {formData.discountType === 'product-specific' && (
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">
+                  Applicable Products
+                </label>
+                <div className="space-y-2 max-h-32 overflow-y-auto border border-zinc-200 rounded-sm p-2">
+                  {products.map(product => (
+                    <label key={product._id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.applicableProducts.includes(product._id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData({
+                              ...formData,
+                              applicableProducts: [...formData.applicableProducts, product._id]
+                            });
+                          } else {
+                            setFormData({
+                              ...formData,
+                              applicableProducts: formData.applicableProducts.filter(p => p !== product._id)
+                            });
+                          }
+                        }}
+                        className="rounded-sm border-zinc-300"
+                      />
+                      <span className="text-sm text-zinc-700">{product.name} ({product.category})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">

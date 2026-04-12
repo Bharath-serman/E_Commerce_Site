@@ -24,16 +24,14 @@ export default function CartPage() {
           <div className="lg:col-span-8">
             <div className="divide-y divide-zinc-200 border-t border-zinc-200">
               {items.map((item) => {
-                const discountedItem = discountedItems.find(d => d.name === item.name);
+                const discountedItem = discountedItems.find(d => d.id === item.id);
                 return (
                 <div key={item.id} className="py-8 flex gap-6">
                   <div className="aspect-[4/5] w-24 sm:w-32 flex-shrink-0 bg-zinc-100 rounded-sm overflow-hidden relative">
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                     {discountedItem && discountedItem.discount && (
                       <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-sm text-xs font-bold">
-                        {discountedItem.discount.type === 'percentage' 
-                          ? `${discountedItem.discount.value}% OFF` 
-                          : `$${discountedItem.discount.value} OFF`}
+                        {discountedItem.discount.discountValue}% OFF
                       </div>
                     )}
                   </div>

@@ -11,6 +11,7 @@ export type CartItem = {
 };
 
 export type DiscountedCartItem = {
+  id: string;
   name: string;
   originalPrice: number;
   discountedPrice: number;
@@ -49,10 +50,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        const { DiscountService } = await import('@/lib/discountService');
-        const result = await DiscountService.calculateCartDiscount(items);
-        setDiscountedItems(result.discountedItems);
-        setTotalDiscount(result.totalDiscount);
+        const res = await fetch('/api/sale-discounts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setDiscountedItems(data.data.discountedItems);
+            setTotalDiscount(data.data.totalDiscount);
+          }
+        }
       } catch (error) {
         console.error('Error calculating discounts:', error);
         setDiscountedItems([]);

@@ -22,7 +22,20 @@ export async function GET() {
   try {
     await connectMongo();
     const products = await Product.find({});
-    return NextResponse.json({ success: true, data: products });
+    
+    // Return full product data for admin interface
+    const formattedProducts = products.map(product => ({
+      _id: product._id.toString(),
+      id: product._id.toString(),
+      name: product.name,
+      price: product.price,
+      description: product.description,
+      image: product.image,
+      details: product.details,
+      category: product.category || 'uncategorized'
+    }));
+    
+    return NextResponse.json({ success: true, data: formattedProducts });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
