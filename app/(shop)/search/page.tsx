@@ -51,8 +51,10 @@ export default async function SearchPage({ searchParams }: { searchParams: { q?:
 
       {results.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-16">
-          {results.map((product) => (
-            <Link href={`/product/${product._id}`} key={product._id} className="group block">
+          {results.map((product) => {
+            const productLink = product._id ? `/product/${product._id}` : '/product/1';
+            return (
+              <Link href={productLink} key={product._id || 'fallback'} className="group block">
               <div className="relative w-full aspect-[4/5] bg-zinc-100 rounded-sm overflow-hidden border border-zinc-200 shadow-sm transition-shadow hover:shadow-xl">
                 <img 
                   src={product.image} 
@@ -65,7 +67,8 @@ export default async function SearchPage({ searchParams }: { searchParams: { q?:
                 <p className="text-sm font-bold">${product.price}</p>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-20">

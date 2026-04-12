@@ -14,6 +14,9 @@ export interface ISale extends Document {
   textColor?: string;
   showCountdown: boolean;
   priority: number; // For ordering multiple sales
+  // Fields for specific discount types
+  applicableCategories?: string[]; // For category discounts
+  applicableProducts?: string[]; // For product-specific discounts
   createdAt: Date;
 }
 
@@ -31,6 +34,9 @@ const SaleSchema: Schema = new Schema({
   textColor: { type: String, default: '#ffffff' },
   showCountdown: { type: Boolean, default: true },
   priority: { type: Number, default: 0 },
+  // Fields for specific discount types
+  applicableCategories: [{ type: String }], // For category discounts
+  applicableProducts: [{ type: String }], // For product-specific discounts
 }, {
   timestamps: true
 });

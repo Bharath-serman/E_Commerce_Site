@@ -3,7 +3,7 @@ import { connectMongo } from '@/lib/mongodb';
 import Product from '@/models/Product';
 import VideoBackground from '@/components/VideoBackground';
 import SaleBanner from '@/components/SaleBanner';
-import DiscountBadge from '@/components/DiscountBadge';
+import ProductCard from '@/components/ProductCard';
 
 // Hybrid DB / Mock fetch
 async function getProducts() {
@@ -15,7 +15,8 @@ async function getProducts() {
         _id: p._id.toString(),
         name: p.name,
         price: p.price,
-        image: p.image
+        image: p.image,
+        category: p.category || 'uncategorized'
       }));
     }
   } catch (error) {
@@ -24,10 +25,10 @@ async function getProducts() {
   
   // Fallback if DB is empty or fails to connect
   return [
-    { _id: '1', name: 'Essential Cotton T-Shirt', price: 35, image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80' },
-    { _id: '2', name: 'Minimalist Hoodie', price: 65, image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80' },
-    { _id: '3', name: 'Classic Denim Jacket', price: 120, image: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80' },
-    { _id: '4', name: 'Wool Blend Coat', price: 195, image: 'https://images.unsplash.com/photo-1539533018408-ea9a9ba39151?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80' }
+    { _id: '1', name: 'Essential Cotton T-Shirt', price: 35, image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', category: 'clothing' },
+    { _id: '2', name: 'Minimalist Hoodie', price: 65, image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', category: 'clothing' },
+    { _id: '3', name: 'Classic Denim Jacket', price: 120, image: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', category: 'clothing' },
+    { _id: '4', name: 'Wool Blend Coat', price: 195, image: 'https://images.unsplash.com/photo-1539533018408-ea9a9ba39151?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', category: 'clothing' }
   ];
 }
 
@@ -108,16 +109,7 @@ export default async function HomePage() {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-16">
           {products.map((product) => (
-            <Link href={`/product/${product._id}`} key={product._id} className="group block">
-              <div className="relative w-full aspect-[4/5] bg-zinc-100 rounded-sm overflow-hidden border border-zinc-200 shadow-sm transition-shadow hover:shadow-xl">
-                <img src={product.image} alt={product.name} className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]" />
-                <DiscountBadge productName={product.name} price={product.price} />
-              </div>
-              <div className="mt-6 flex justify-between items-center text-zinc-900">
-                <h3 className="text-sm uppercase tracking-wider font-semibold">{product.name}</h3>
-                <p className="text-sm font-medium">${product.price}</p>
-              </div>
-            </Link>
+            <ProductCard key={product._id} product={product} />
           ))}
         </div>
       </section>
