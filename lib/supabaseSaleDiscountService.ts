@@ -1,17 +1,17 @@
-import { connectMongo } from './mongodb';
-import Sale from '@/models/Sale';
-import Product from '@/models/Product';
+import { supabase, Database } from './supabase';
+import { ProductService, SaleService, Product, Sale } from './supabaseModels';
 
 export interface SaleDiscount {
-  _id: string;
+  id: string;
   title: string;
-  discountType: 'site-wide' | 'category' | 'product-specific';
-  discountValue: number;
-  applicableCategories?: string[];
-  applicableProducts?: string[];
+  discount_type: 'site-wide' | 'category' | 'product-specific';
+  discount_value: number;
+  applicable_categories?: string[];
+  applicable_products?: string[];
+  start_date: Date;
+  end_date: Date;
+  is_active: boolean;
   startDate: Date;
-  endDate: Date;
-  isActive: boolean;
 }
 
 export interface DiscountedProduct {
@@ -23,27 +23,31 @@ export interface DiscountedProduct {
   category?: string;
 }
 
-export class SaleDiscountService {
+export class SupabaseSaleDiscountService {
   static async getActiveSales(): Promise<SaleDiscount[]> {
     try {
-      await connectMongo();
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('is_active', true)
+        .lte('start_date', new Date().toISOString())
+        .gte('end_date', new Date().toISOString())
+        .order('priority', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
       
-      const sales = await Sale.find({ 
-        isActive: true,
-        startDate: { $lte: new Date() },
-        endDate: { $gte: new Date() }
-      }).sort({ priority: -1, createdAt: -1 });
-      
-      return sales.map(sale => ({
-        _id: sale._id.toString(),
+      return (data || []).map((sale: any) => ({
+        id: sale.id,
         title: sale.title,
-        discountType: sale.discountType,
-        discountValue: sale.discountValue,
-        applicableCategories: sale.applicableCategories || [],
-        applicableProducts: sale.applicableProducts || [],
-        startDate: sale.startDate,
-        endDate: sale.endDate,
-        isActive: sale.isActive
+        discount_type: sale.discount_type,
+        discount_value: sale.discount_value,
+        applicable_categories: sale.applicable_categories,
+        applicable_products: sale.applicable_products,
+        start_date: new Date(sale.start_date),
+        end_date: new Date(sale.end_date),
+        is_active: sale.is_active,
+        startDate: new Date(sale.start_date)
       }));
     } catch (error) {
       console.error('Error fetching active sales:', error);
@@ -53,10 +57,8 @@ export class SaleDiscountService {
 
   static async getProductsWithDiscounts(): Promise<DiscountedProduct[]> {
     try {
-      await connectMongo();
-      
       const [products, activeSales] = await Promise.all([
-        Product.find({}),
+        ProductService.getAll(),
         this.getActiveSales()
       ]);
 
@@ -67,7 +69,7 @@ export class SaleDiscountService {
           : product.price;
 
         return {
-          id: product._id.toString(),
+          id: product.id,
           name: product.name,
           originalPrice: product.price,
           discountedPrice,
@@ -81,7 +83,7 @@ export class SaleDiscountService {
     }
   }
 
-  static findBestSaleForProduct(product: any, activeSales: SaleDiscount[]): SaleDiscount | null {
+  static findBestSaleForProduct(product: Product, activeSales: SaleDiscount[]): SaleDiscount | null {
     let bestSale: SaleDiscount | null = null;
     let bestDiscountedPrice = product.price;
 
@@ -98,24 +100,24 @@ export class SaleDiscountService {
     return bestSale;
   }
 
-  static isSaleApplicableToProduct(sale: SaleDiscount, product: any): boolean {
-    switch (sale.discountType) {
+  static isSaleApplicableToProduct(sale: SaleDiscount, product: Product): boolean {
+    switch (sale.discount_type) {
       case 'site-wide':
         return true;
       
       case 'category':
-        return sale.applicableCategories && 
-               sale.applicableCategories.includes(product.category);
+        return Boolean(sale.applicable_categories && 
+               sale.applicable_categories.includes(product.category || ''));
       
       case 'product-specific':
         console.log('Product-specific sale check:', {
           saleTitle: sale.title,
-          productId: product._id.toString(),
-          applicableProducts: sale.applicableProducts,
-          result: sale.applicableProducts && sale.applicableProducts.includes(product._id.toString())
+          productId: product.id,
+          productSaleId: product.sale_id,
+          saleId: sale.id,
+          result: product.sale_id === sale.id
         });
-        return sale.applicableProducts && 
-               sale.applicableProducts.includes(product._id.toString());
+        return product.sale_id === sale.id;
       
       default:
         return false;
@@ -123,7 +125,7 @@ export class SaleDiscountService {
   }
 
   static calculateDiscountedPrice(originalPrice: number, sale: SaleDiscount): number {
-    const discountAmount = originalPrice * (sale.discountValue / 100);
+    const discountAmount = originalPrice * (sale.discount_value / 100);
     return Math.max(0, originalPrice - discountAmount);
   }
 
@@ -145,7 +147,7 @@ export class SaleDiscountService {
   }> {
     try {
       const [products, activeSales] = await Promise.all([
-        Product.find({}),
+        ProductService.getAll(),
         this.getActiveSales()
       ]);
 
@@ -153,7 +155,7 @@ export class SaleDiscountService {
       const discountedItems = [];
 
       for (const cartItem of cartItems) {
-        const product = products.find(p => p._id.toString() === cartItem.id);
+        const product = products.find(p => p.id === cartItem.id);
         if (!product) {
           // Fallback if product not found
           discountedItems.push({
@@ -169,18 +171,18 @@ export class SaleDiscountService {
 
         const applicableSale = this.findBestSaleForProduct(product, activeSales);
         const discountedPrice = applicableSale 
-          ? this.calculateDiscountedPrice(cartItem.price, applicableSale)
-          : cartItem.price;
+          ? this.calculateDiscountedPrice(product.price, applicableSale)
+          : product.price;
 
         if (applicableSale) {
-          const itemDiscount = (cartItem.price - discountedPrice) * cartItem.quantity;
+          const itemDiscount = (product.price - discountedPrice) * cartItem.quantity;
           totalDiscount += itemDiscount;
         }
 
         discountedItems.push({
           id: cartItem.id,
           name: cartItem.name,
-          originalPrice: cartItem.price,
+          originalPrice: product.price,
           discountedPrice,
           quantity: cartItem.quantity,
           discount: applicableSale
@@ -206,10 +208,7 @@ export class SaleDiscountService {
 
   static async getCategories(): Promise<string[]> {
     try {
-      await connectMongo();
-      
-      const categories = await Product.distinct('category');
-      return categories.filter(cat => cat && cat !== 'uncategorized');
+      return await ProductService.getCategories();
     } catch (error) {
       console.error('Error fetching categories:', error);
       return [];
@@ -218,13 +217,17 @@ export class SaleDiscountService {
 
   static async getProductsForCategory(category: string): Promise<any[]> {
     try {
-      await connectMongo();
+      const products = await supabase
+        .from('products')
+        .select('id, name')
+        .eq('category', category);
+
+      if (products.error) throw products.error;
       
-      const products = await Product.find({ category }).select('_id name');
-      return products.map(product => ({
-        id: product._id.toString(),
+      return products.data?.map((product: any) => ({
+        id: product.id,
         name: product.name
-      }));
+      })) || [];
     } catch (error) {
       console.error('Error fetching products for category:', error);
       return [];
@@ -233,14 +236,17 @@ export class SaleDiscountService {
 
   static async getAllProducts(): Promise<any[]> {
     try {
-      await connectMongo();
+      const products = await supabase
+        .from('products')
+        .select('id, name, category');
+
+      if (products.error) throw products.error;
       
-      const products = await Product.find({}).select('_id name category');
-      return products.map(product => ({
-        id: product._id.toString(),
+      return products.data?.map((product: any) => ({
+        id: product.id,
         name: product.name,
         category: product.category
-      }));
+      })) || [];
     } catch (error) {
       console.error('Error fetching all products:', error);
       return [];

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connectMongo } from '@/lib/mongodb';
-import Product from '@/models/Product';
+import { ProductService } from '@/lib/supabaseModels';
 
 export async function DELETE(
   req: Request,
@@ -9,15 +8,8 @@ export async function DELETE(
   try {
     const { id } = await params;
     
-    // Connect to database
-    await connectMongo();
-    
-    // Find and delete the product
-    const deletedProduct = await Product.findByIdAndDelete(id);
-    
-    if (!deletedProduct) {
-      return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 });
-    }
+    // Delete product using Supabase
+    await ProductService.delete(id);
     
     return NextResponse.json({ success: true, message: "Product deleted successfully" });
   } catch (error: any) {

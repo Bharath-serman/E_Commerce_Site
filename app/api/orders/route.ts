@@ -1,40 +1,61 @@
 import { NextResponse } from 'next/server';
-import { connectMongo } from '@/lib/mongodb';
-import Order from '@/models/Order';
+import { OrderService } from '@/lib/supabaseModels';
 
 export async function POST(req: Request) {
   try {
     const { stripeSessionId, transactionId, customerName, customerEmail, items, totalAmount } = await req.json();
     
-    await connectMongo();
-    
-    // Check if order already exists to prevent duplicates on page refresh
-    const existingOrder = await Order.findOne({ stripeSessionId });
-    if (existingOrder) {
-      return NextResponse.json({ success: true, message: 'Order already recorded' });
-    }
-    
-    const newOrder = await Order.create({
+    console.log('Creating order with data:', {
       stripeSessionId,
       transactionId,
       customerName,
       customerEmail,
-      items,
-      totalAmount
+      totalAmount,
+      itemsCount: items?.length
     });
     
+    // Check if order already exists to prevent duplicates on page refresh
+    const existingOrder = await OrderService.getByStripeSessionId(stripeSessionId);
+    if (existingOrder) {
+      console.log('Order already exists for session:', stripeSessionId);
+      return NextResponse.json({ success: true, message: 'Order already recorded' });
+    }
+    
+    const orderData = {
+      stripe_session_id: stripeSessionId,
+      customer_name: customerName,
+      customer_email: customerEmail,
+      items: items,
+      total_amount: totalAmount,
+      status: 'paid'
+    };
+    
+    console.log('Order data to insert:', orderData);
+    
+    const newOrder = await OrderService.create(orderData);
+    
+    console.log('Order created successfully:', newOrder.id);
     return NextResponse.json({ success: true, data: newOrder });
   } catch (error: any) {
-    console.error("Order creation error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    console.error("Order creation error:", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint
+    });
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message,
+      code: error.code,
+      details: error.details
+    }, { status: 400 });
   }
 }
 
 export async function GET() {
   try {
-    await connectMongo();
     // Return newest orders first
-    const orders = await Order.find({}).sort({ createdAt: -1 });
+    const orders = await OrderService.getAll();
     return NextResponse.json({ success: true, data: orders });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

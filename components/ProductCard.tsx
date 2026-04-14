@@ -7,10 +7,12 @@ import DiscountBadge from './DiscountBadge';
 interface ProductCardProps {
   product: {
     _id: string;
+    id: string;
     name: string;
     price: number;
     image: string;
     category?: string;
+    sale_id?: string;
   };
 }
 
@@ -26,23 +28,24 @@ export default function ProductCard({ product }: ProductCardProps) {
           if (data.success) {
             // Find applicable sale for this product
             const applicableSale = data.data.find((sale: any) => {
-              if (sale.discountType === 'site-wide') return true;
-              if (sale.discountType === 'category' && product.category) {
-                return sale.applicableCategories.includes(product.category);
+              if (sale.discount_type === 'site-wide') return true;
+              if (sale.discount_type === 'category' && product.category) {
+                return sale.applicable_categories.includes(product.category);
               }
-              if (sale.discountType === 'product-specific') {
+              if (sale.discount_type === 'product-specific') {
                 console.log('Product-specific sale check:', {
                   productId: product._id,
-                  applicableProducts: sale.applicableProducts,
-                  includes: sale.applicableProducts.includes(product._id)
+                  productSaleId: product.sale_id,
+                  saleId: sale.id,
+                  result: product.sale_id === sale.id
                 });
-                return sale.applicableProducts.includes(product._id);
+                return product.sale_id === sale.id;
               }
               return false;
             });
             
             if (applicableSale) {
-              const discountAmount = product.price * (applicableSale.discountValue / 100);
+              const discountAmount = product.price * (applicableSale.discount_value / 100);
               const price = Math.max(0, product.price - discountAmount);
               setDiscountedPrice(price);
             } else {
@@ -56,7 +59,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     };
 
     fetchDiscountedPrice();
-  }, [product._id, product.name, product.category, product.price]);
+  }, [product._id, product.name, product.category, product.price, product.sale_id]);
 
   return (
     <Link href={`/product/${product._id}`} className="group block">
@@ -71,6 +74,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           productName={product.name} 
           price={product.price} 
           category={product.category}
+          sale_id={product.sale_id}
         />
       </div>
       <div className="mt-6 flex justify-between items-center text-zinc-900">
