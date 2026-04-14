@@ -31,7 +31,7 @@ export default function CartPage() {
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                     {discountedItem && discountedItem.discount && (
                       <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-sm text-xs font-bold">
-                        {discountedItem.discount.discountValue}% OFF
+                        {discountedItem.discount.discount_value}% OFF
                       </div>
                     )}
                   </div>
@@ -40,18 +40,24 @@ export default function CartPage() {
                       <div>
                         <h3 className="text-base text-zinc-900 font-medium">{item.name}</h3>
                         <div className="flex items-center gap-2">
-                          <p className={`mt-1 text-sm ${discountedItem ? 'text-zinc-400 line-through' : 'text-zinc-500'}`}>
-                            ${item.price}
-                          </p>
-                          {discountedItem && (
-                            <p className="mt-1 text-sm text-green-600 font-medium">
-                              ${discountedItem.discountedPrice.toFixed(2)}
+                          {discountedItem && discountedItem.discount && discountedItem.discountedPrice < item.price ? (
+                            <>
+                              <p className="mt-1 text-sm text-zinc-400 line-through">
+                                ${item.price}
+                              </p>
+                              <p className="mt-1 text-sm text-green-600 font-medium">
+                                ${discountedItem.discountedPrice.toFixed(2)}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="mt-1 text-sm text-zinc-500">
+                              ${item.price}
                             </p>
                           )}
                         </div>
                       </div>
                       <p className="text-base font-medium text-zinc-900">
-                        {((discountedItem ? discountedItem.discountedPrice : item.price) * item.quantity).toFixed(2)}
+                        {(((discountedItem && discountedItem.discount && discountedItem.discountedPrice < item.price) ? discountedItem.discountedPrice : item.price) * item.quantity).toFixed(2)}
                       </p>
                     </div>
                     <div className="flex justify-between items-end">

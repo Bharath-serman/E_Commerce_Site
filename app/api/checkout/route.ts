@@ -20,8 +20,8 @@ export async function POST(req: Request) {
     let appliedDiscounts: any[] = [];
     
     try {
-      const { SaleDiscountService } = await import('@/lib/saleDiscountService');
-      discountResult = await SaleDiscountService.calculateCartDiscount(items);
+      const { SupabaseSaleDiscountService } = await import('@/lib/supabaseSaleDiscountService');
+      discountResult = await SupabaseSaleDiscountService.calculateCartDiscount(items);
       discountAmount = discountResult.totalDiscount;
       appliedDiscounts = discountResult.discountedItems
         .filter((item: any) => item.discount)
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
           product_data: { 
             name: item.name,
             images: [item.image],
-            description: itemDiscount ? `Sale discount applied: ${itemDiscount.discountValue}% OFF` : undefined,
+            description: itemDiscount ? `Sale discount applied: ${itemDiscount.discount_value}% OFF` : undefined,
           },
           unit_amount: Math.round(finalPrice * 100), // Stripe expects cents
         },

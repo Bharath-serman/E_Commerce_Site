@@ -13,6 +13,41 @@ function SuccessContent() {
   const [mounted, setMounted] = useState(false);
   const [orderDetails, setOrderDetails] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const downloadReceipt = async (receiptUrl: string) => {
+    try {
+      setDownloading(true);
+      
+      const response = await fetch('/api/receipt/download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ receiptUrl }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download receipt');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `receipt-${sessionId?.slice(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+    } catch (error) {
+      console.error('Error downloading receipt:', error);
+      alert('Failed to download receipt. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   useEffect(() => {
     // Basic setup
@@ -138,12 +173,12 @@ function SuccessContent() {
               <div className="mt-12 flex flex-col sm:flex-row gap-4 items-center">
                 {orderDetails.receiptUrl && (
                   <a
-                    href={orderDetails.receiptUrl}
+                    href={`/receipt?session=${sessionId}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full sm:w-auto bg-black text-white px-8 py-4 text-xs tracking-[0.2em] uppercase font-bold rounded-sm shadow-lg hover:bg-zinc-800 transition-all text-center"
                   >
-                    Download Receipt
+                    View Receipt
                   </a>
                 )}
                 <Link

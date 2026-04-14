@@ -39,11 +39,11 @@ export default function AdminDashboard() {
     }
 
     const filtered = orders.filter(order => {
-      const referenceId = `#${order.stripeSessionId.slice(-8).toUpperCase()}`;
+      const referenceId = order.stripe_session_id ? `#${order.stripe_session_id.slice(-8).toUpperCase()}` : '#N/A';
       return (
         referenceId.toLowerCase().includes(term) ||
-        order.customerName.toLowerCase().includes(term) ||
-        order.customerEmail.toLowerCase().includes(term)
+        order.customer_name?.toLowerCase().includes(term) ||
+        order.customer_email?.toLowerCase().includes(term)
       );
     });
     setFilteredOrders(filtered);
@@ -122,20 +122,20 @@ export default function AdminDashboard() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col">
                           <span className="text-[10px] text-zinc-900 font-mono font-bold">
-                            #{order.stripeSessionId.slice(-8).toUpperCase()}
+                            #{order.stripe_session_id ? order.stripe_session_id.slice(-8).toUpperCase() : 'N/A'}
                           </span>
                           <span className="text-[9px] text-zinc-400 uppercase tracking-tighter">Order Reference</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold text-zinc-900 uppercase tracking-tight">{order.customerName}</span>
-                          <span className="text-[10px] text-zinc-500 font-light">{order.customerEmail}</span>
+                          <span className="text-xs font-bold text-zinc-900 uppercase tracking-tight">{order.customer_name}</span>
+                          <span className="text-[10px] text-zinc-500 font-light">{order.customer_email}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col gap-1">
-                          {order.items.map((item: any, idx: number) => (
+                          {order.items ? order.items.map((item: any, idx: number) => (
                             <div key={idx} className="flex items-center gap-2">
                               <span className="text-[10px] font-bold bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded-sm">
                                 {item.quantity}x
@@ -144,15 +144,17 @@ export default function AdminDashboard() {
                                 {item.description || item.name}
                               </span>
                             </div>
-                          ))}
+                          )) : (
+                            <span className="text-[10px] text-zinc-500">No items</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-zinc-900">
-                        ${order.totalAmount.toFixed(2)}
+                        ${order.total_amount ? order.total_amount.toFixed(2) : '0.00'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <span className="px-2.5 py-1 inline-flex text-[10px] leading-5 font-bold rounded-full bg-green-50 text-green-700 uppercase tracking-widest border border-green-100 shadow-sm">
-                          {order.status}
+                          {order.status || 'pending'}
                         </span>
                       </td>
                     </tr>

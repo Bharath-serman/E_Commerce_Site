@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { SaleDiscountService } from '@/lib/saleDiscountService';
+import { SupabaseSaleDiscountService } from '@/lib/supabaseSaleDiscountService';
 
 export async function GET() {
   try {
-    const categories = await SaleDiscountService.getCategories();
+    const categories = await SupabaseSaleDiscountService.getCategories();
     return NextResponse.json({ success: true, data: categories });
   } catch (error: any) {
     console.error('Error fetching categories:', error);

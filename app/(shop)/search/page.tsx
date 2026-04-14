@@ -1,38 +1,31 @@
 import Link from 'next/link';
-import { connectMongo } from '@/lib/mongodb';
-import Product from '@/models/Product';
+import ProductCard from '@/components/ProductCard';
 
-// Hybrid DB / Mock fetch specifically for Search
+// Supabase search fetch
 const searchProducts = async (query: string) => {
   try {
-    await connectMongo();
-    // Directly ask MongoDB to find products mentioning the keyword (case-insensitive)
-    const filter = query ? { name: { $regex: query, $options: 'i' } } : {};
-    const dbProducts = await Product.find(filter).lean();
+    // Use Supabase ProductService
+    const { ProductService } = await import('@/lib/supabaseModels');
+    const allProducts = await ProductService.getAll();
     
-    if (dbProducts.length > 0 || !query) {
-      return dbProducts.map((p: any) => ({
-        _id: p._id.toString(),
-        name: p.name,
-        price: p.price,
-        image: p.image
-      }));
-    }
+    // Filter products client-side (since Supabase doesn't have text search in this setup)
+    const filteredProducts = query 
+      ? allProducts.filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
+      : allProducts;
+    
+    return filteredProducts.map((p) => ({
+      _id: p.id,
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      image: p.image,
+      category: p.category,
+      sale_id: p.sale_id
+    }));
   } catch (error) {
-    console.warn("MongoDB not connected or empty, falling back to mock data.");
+    console.error("Supabase search failed:", error);
+    return [];
   }
-  
-  // Fallback Mock Data if MongoDB isn't running or finds 0 results but DB has 0 items
-  const mockProducts = [
-    { _id: '1', name: 'Essential Cotton T-Shirt', price: 35, image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80' },
-    { _id: '2', name: 'Minimalist Hoodie', price: 65, image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80' },
-    { _id: '3', name: 'Classic Denim Jacket', price: 120, image: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80' },
-    { _id: '4', name: 'Wool Blend Coat', price: 195, image: 'https://images.unsplash.com/photo-1539533018408-ea9a9ba39151?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80' }
-  ];
-
-  return query 
-    ? mockProducts.filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
-    : mockProducts;
 };
 
 export default async function SearchPage({ searchParams }: { searchParams: { q?: string } }) {
@@ -51,24 +44,9 @@ export default async function SearchPage({ searchParams }: { searchParams: { q?:
 
       {results.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-16">
-          {results.map((product) => {
-            const productLink = product._id ? `/product/${product._id}` : '/product/1';
-            return (
-              <Link href={productLink} key={product._id || 'fallback'} className="group block">
-              <div className="relative w-full aspect-[4/5] bg-zinc-100 rounded-sm overflow-hidden border border-zinc-200 shadow-sm transition-shadow hover:shadow-xl">
-                <img 
-                  src={product.image} 
-                  alt={product.name} 
-                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
-                />
-              </div>
-              <div className="mt-6 flex justify-between items-center text-black">
-                <h3 className="text-sm uppercase tracking-wider font-semibold">{product.name}</h3>
-                <p className="text-sm font-bold">${product.price}</p>
-              </div>
-            </Link>
-            );
-          })}
+          {results.map((product) => (
+            <ProductCard key={product._id} product={product} />
+          ))}
         </div>
       ) : (
         <div className="text-center py-20">

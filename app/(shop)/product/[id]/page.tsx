@@ -1,67 +1,32 @@
 import CheckoutButton from '@/components/CheckoutButton';
 import AddToCartButton from '@/components/AddToCartButton';
-import { connectMongo } from '@/lib/mongodb';
-import Product from '@/models/Product';
 import { notFound } from 'next/navigation';
 import DiscountBadge from '@/components/DiscountBadge';
 
-// Hybrid DB / Mock fetch
+// Supabase product fetch
 const getProduct = async (id: string) => {
   try {
-    // Attempt MongoDB fetch first
-    await connectMongo();
-    // Use mongoose.isValidObjectId to check if it's a real DB ID, otherwise it might be a mock string like '1'
-    if (id.length === 24) { 
-      const dbProduct = await Product.findById(id).lean();
-      if (dbProduct) {
-        return JSON.parse(JSON.stringify({
-          _id: dbProduct._id.toString(),
-          name: dbProduct.name,
-          price: dbProduct.price,
-          description: dbProduct.description,
-          image: dbProduct.image,
-          details: dbProduct.details || ['Premium Quality', 'Authentic Design'],
-          category: dbProduct.category || 'uncategorized'
-        }));
-      }
+    // Use Supabase ProductService
+    const { ProductService } = await import('@/lib/supabaseModels');
+    const product = await ProductService.getById(id);
+    if (product) {
+        return {
+          _id: product.id,
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          description: product.description,
+          image: product.image,
+          details: product.details || ['Premium Quality', 'Authentic Design'],
+          category: product.category || 'uncategorized',
+          sale_id: product.sale_id
+        };
     }
   } catch (error) {
-    console.warn("MongoDB fetch failed, trying mock fallback...");
+    console.error("Supabase fetch failed:", error);
   }
 
-  // Fallback to Mock Data if ID is '1', '2', '3', '4' or DB fails
-  const mockProducts: Record<string, any> = {
-    '1': { 
-      _id: '1', name: 'Essential Cotton T-Shirt', price: 35, 
-      description: 'Elevate your comfort with our heavyweight premium structured fit...', 
-      image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-      details: ['100% Organic Material', 'Heavyweight Structure'],
-      category: 'clothing'
-    },
-    '2': { 
-      _id: '2', name: 'Minimalist Hoodie', price: 65, 
-      description: 'Relaxed drape, precision tailoring, and subtle tonal branding.', 
-      image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-      details: ['Premium blend', 'Made in Portugal'],
-      category: 'clothing'
-    },
-    '3': { 
-      _id: '3', name: 'Classic Denim Jacket', price: 120, 
-      description: 'Vintage wash with modern tailoring.', 
-      image: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-      details: ['100% Cotton Denim', 'Reinforced stitching'],
-      category: 'clothing'
-    },
-    '4': { 
-      _id: '4', name: 'Wool Blend Coat', price: 195, 
-      description: 'Perfect for year-round layered aesthetics.', 
-      image: 'https://images.unsplash.com/photo-1539533018408-ea9a9ba39151?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-      details: ['80% Wool', '20% Polyamide'],
-      category: 'clothing'
-    }
-  };
-
-  return mockProducts[id] || null;
+  return null;
 };
 
 export default async function ProductPage({ params }: { params: { id: string } }) {
@@ -77,15 +42,30 @@ export default async function ProductPage({ params }: { params: { id: string } }
   let applicableSale = null;
   
   try {
-    console.log('ProductPage fetching discount for:', { productId: product._id, productName: product.name, category: product.category });
-    const { SaleDiscountService } = await import('@/lib/saleDiscountService');
-    const activeSales = await SaleDiscountService.getActiveSales();
+    console.log('ProductPage fetching discount for:', { productId: product.id, productName: product.name, category: product.category });
+    const { SupabaseSaleDiscountService } = await import('@/lib/supabaseSaleDiscountService');
+    const activeSales = await SupabaseSaleDiscountService.getActiveSales();
     console.log('ProductPage active sales:', activeSales);
-    applicableSale = SaleDiscountService.findBestSaleForProduct(product, activeSales);
+    
+    // Convert product to format expected by service
+    const productForService = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      description: product.description,
+      image: product.image,
+      details: product.details,
+      category: product.category,
+      sale_id: product.sale_id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    applicableSale = SupabaseSaleDiscountService.findBestSaleForProduct(productForService, activeSales);
     console.log('ProductPage found applicable sale:', applicableSale);
     
     if (applicableSale) {
-      discountedPrice = SaleDiscountService.calculateDiscountedPrice(product.price, applicableSale);
+      discountedPrice = SupabaseSaleDiscountService.calculateDiscountedPrice(product.price, applicableSale);
       console.log('ProductPage calculated discounted price:', { original: product.price, discounted: discountedPrice });
     }
   } catch (error) {
@@ -109,6 +89,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
             productName={product.name} 
             price={product.price} 
             category={product.category}
+            sale_id={product.sale_id}
           />
         </div>
         
@@ -143,8 +124,8 @@ export default async function ProductPage({ params }: { params: { id: string } }
         </div>
         
         <div className="mt-12 flex flex-col space-y-4">
-          <AddToCartButton product={{ id: product._id, name: product.name, price: discountedPrice || product.price, image: product.image }} />
-          <CheckoutButton product={{ id: product._id, name: product.name, price: discountedPrice || product.price, image: product.image }} />
+          <AddToCartButton product={{ id: product._id, name: product.name, price: product.price, image: product.image }} />
+          <CheckoutButton product={{ id: product._id, name: product.name, price: product.price, image: product.image }} />
         </div>
       </div>
     </div>
