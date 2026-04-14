@@ -56,9 +56,9 @@ export default function DiscountManagement() {
         minOrderValue: formData.minOrderValue ? parseFloat(formData.minOrderValue) : undefined,
         maxDiscountAmount: formData.maxDiscountAmount ? parseFloat(formData.maxDiscountAmount) : undefined,
         usageLimit: formData.usageLimit ? parseInt(formData.usageLimit) : undefined,
-        startDate: new Date(formData.startDate),
-        endDate: new Date(formData.endDate),
-        ...(editingDiscount && { id: editingDiscount._id })
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        ...(editingDiscount && { id: editingDiscount.id })
       };
 
       const url = '/api/discounts';
@@ -87,13 +87,13 @@ export default function DiscountManagement() {
       name: discount.name,
       type: discount.type,
       value: discount.value.toString(),
-      applicableProducts: discount.applicableProducts || [],
-      minOrderValue: discount.minOrderValue?.toString() || '',
-      maxDiscountAmount: discount.maxDiscountAmount?.toString() || '',
-      startDate: new Date(discount.startDate).toISOString().split('T')[0],
-      endDate: new Date(discount.endDate).toISOString().split('T')[0],
-      isActive: discount.isActive,
-      usageLimit: discount.usageLimit?.toString() || ''
+      applicableProducts: discount.applicable_products || [],
+      minOrderValue: discount.min_order_value?.toString() || '',
+      maxDiscountAmount: discount.max_discount_amount?.toString() || '',
+      startDate: new Date(discount.start_date).toISOString().split('T')[0],
+      endDate: new Date(discount.end_date).toISOString().split('T')[0],
+      isActive: discount.is_active,
+      usageLimit: discount.usage_limit?.toString() || ''
     });
     setShowForm(true);
   };
@@ -101,7 +101,7 @@ export default function DiscountManagement() {
   const handleDelete = (discount: any) => {
     setDeleteModal({
       isOpen: true,
-      discountId: discount._id,
+      discountId: discount.id,
       discountName: discount.name
     });
   };
@@ -334,20 +334,20 @@ export default function DiscountManagement() {
           </thead>
           <tbody className="bg-white divide-y divide-zinc-200">
             {discounts.map((discount) => (
-              <tr key={discount._id} className="hover:bg-zinc-50">
+              <tr key={discount.id} className="hover:bg-zinc-50">
                 <td className="px-6 py-4 text-sm font-medium text-zinc-900">{discount.name}</td>
                 <td className="px-6 py-4 text-sm text-zinc-500 capitalize">{discount.type}</td>
                 <td className="px-6 py-4 text-sm text-zinc-500">
                   {discount.type === 'percentage' ? `${discount.value}%` : `$${discount.value}`}
                 </td>
                 <td className="px-6 py-4 text-sm text-zinc-500">
-                  {new Date(discount.startDate).toLocaleDateString()} - {new Date(discount.endDate).toLocaleDateString()}
+                  {new Date(discount.start_date).toLocaleDateString()} - {new Date(discount.end_date).toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs font-bold rounded-full ${
-                    discount.isActive ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                    discount.is_active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                   }`}>
-                    {discount.isActive ? 'Active' : 'Inactive'}
+                    {discount.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm">

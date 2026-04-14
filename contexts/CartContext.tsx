@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { DiscountService } from '@/lib/discountService';
 
 export type CartItem = {
   id: string;
@@ -50,19 +51,62 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        const res = await fetch('/api/sale-discounts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items })
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) {
-            setDiscountedItems(data.data.discountedItems);
-            setTotalDiscount(data.data.totalDiscount);
+        // Get both sales discounts and regular discounts
+        const [salesRes, discounts] = await Promise.all([
+          fetch('/api/sale-discounts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items })
+          }),
+          DiscountService.getActiveDiscounts()
+        ]);
+
+        let allDiscountedItems: DiscountedCartItem[] = [];
+        let totalCartDiscount = 0;
+
+        // Process sales discounts
+        if (salesRes.ok) {
+          const salesData = await salesRes.json();
+          if (salesData.success) {
+            allDiscountedItems = salesData.data.discountedItems;
+            totalCartDiscount = salesData.data.totalDiscount;
           }
         }
+
+        // Process regular discounts and find better deals
+        if (discounts.length > 0) {
+          for (const item of items) {
+            const applicableDiscount = discounts.find(discount => 
+              DiscountService.getApplicableDiscount(discount, item.id, item.price * item.quantity)
+            );
+            
+            if (applicableDiscount) {
+              const discountedPrice = DiscountService.calculateDiscountedPrice(item.price, applicableDiscount);
+              const existingItem = allDiscountedItems.find(d => d.id === item.id);
+              
+              if (!existingItem || discountedPrice < existingItem.discountedPrice) {
+                // Update or add the item with better discount
+                allDiscountedItems = allDiscountedItems.filter(d => d.id !== item.id);
+                allDiscountedItems.push({
+                  id: item.id,
+                  name: item.name,
+                  originalPrice: item.price,
+                  discountedPrice,
+                  quantity: item.quantity,
+                  discount: applicableDiscount
+                });
+              }
+            }
+          }
+          
+          // Recalculate total discount
+          totalCartDiscount = allDiscountedItems.reduce((total, item) => {
+            return total + ((item.originalPrice - item.discountedPrice) * item.quantity);
+          }, 0);
+        }
+
+        setDiscountedItems(allDiscountedItems);
+        setTotalDiscount(totalCartDiscount);
       } catch (error) {
         console.error('Error calculating discounts:', error);
         setDiscountedItems([]);

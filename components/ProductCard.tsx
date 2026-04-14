@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import DiscountBadge from './DiscountBadge';
+import { DiscountService } from '@/lib/discountService';
 
 interface ProductCardProps {
   product: {
@@ -20,39 +21,78 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [discountedPrice, setDiscountedPrice] = useState<number | null>(null);
 
   useEffect(() => {
+    console.log('ProductCard useEffect running for product:', product._id, product.name);
     const fetchDiscountedPrice = async () => {
       try {
-        const res = await fetch('/api/sale-discounts');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) {
-            // Find applicable sale for this product
-            const applicableSale = data.data.find((sale: any) => {
+        console.log('ProductCard starting discount fetch...');
+        // Check both sales and discounts
+        const [salesRes, discounts] = await Promise.all([
+          fetch('/api/sale-discounts'),
+          DiscountService.getActiveDiscounts()
+        ]);
+
+        console.log('ProductCard discounts data received:', discounts);
+        console.log('ProductCard sales response:', salesRes);
+
+        let bestPrice = product.price;
+        let hasDiscount = false;
+
+        // Check sales
+        if (salesRes.ok) {
+          const salesData = await salesRes.json();
+          if (salesData.success) {
+            const applicableSale = salesData.data.find((sale: any) => {
               if (sale.discount_type === 'site-wide') return true;
               if (sale.discount_type === 'category' && product.category) {
                 return sale.applicable_categories.includes(product.category);
               }
               if (sale.discount_type === 'product-specific') {
-                console.log('Product-specific sale check:', {
-                  productId: product._id,
-                  productSaleId: product.sale_id,
-                  saleId: sale.id,
-                  result: product.sale_id === sale.id
-                });
-                return product.sale_id === sale.id;
+                return sale.applicable_products?.includes(product._id) || product.sale_id === sale.id;
               }
               return false;
             });
             
             if (applicableSale) {
               const discountAmount = product.price * (applicableSale.discount_value / 100);
-              const price = Math.max(0, product.price - discountAmount);
-              setDiscountedPrice(price);
-            } else {
-              setDiscountedPrice(null);
+              bestPrice = Math.min(bestPrice, Math.max(0, product.price - discountAmount));
+              hasDiscount = true;
             }
           }
         }
+
+        // Check discounts
+        if (discounts.length > 0) {
+          console.log('ProductCard checking discounts:', {
+            productId: product._id,
+            productName: product.name,
+            discountsCount: discounts.length,
+            discounts: discounts.map(d => ({ 
+              name: d.name, 
+              type: d.type, 
+              value: d.value,
+              applicableProducts: d.applicable_products 
+            }))
+          });
+          
+          const applicableDiscount = discounts.find(discount => 
+            DiscountService.getApplicableDiscount(discount, product._id, product.price)
+          );
+          
+          console.log('ProductCard applicable discount found:', applicableDiscount);
+          
+          if (applicableDiscount) {
+            const discountedPrice = DiscountService.calculateDiscountedPrice(product.price, applicableDiscount);
+            console.log('ProductCard discounted price calculation:', {
+              originalPrice: product.price,
+              discountedPrice,
+              bestPrice: bestPrice
+            });
+            bestPrice = Math.min(bestPrice, discountedPrice);
+            hasDiscount = true;
+          }
+        }
+
+        setDiscountedPrice(hasDiscount ? bestPrice : null);
       } catch (error) {
         console.error('Error fetching discounted price:', error);
       }

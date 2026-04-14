@@ -36,16 +36,16 @@ export default function ProductSelector({ selectedProducts, onSelectionChange }:
     fetchProducts();
   }, []);
 
-  const handleProductToggle = (productName: string) => {
-    if (selectedProducts.includes(productName)) {
-      onSelectionChange(selectedProducts.filter(p => p !== productName));
+  const handleProductToggle = (productId: string) => {
+    if (selectedProducts.includes(productId)) {
+      onSelectionChange(selectedProducts.filter(p => p !== productId));
     } else {
-      onSelectionChange([...selectedProducts, productName]);
+      onSelectionChange([...selectedProducts, productId]);
     }
   };
 
   const handleSelectAll = () => {
-    onSelectionChange(products.map(p => p.name));
+    onSelectionChange(products.map(p => p._id));
   };
 
   const handleClearAll = () => {
@@ -94,8 +94,8 @@ export default function ProductSelector({ selectedProducts, onSelectionChange }:
           >
             <input
               type="checkbox"
-              checked={selectedProducts.includes(product.name)}
-              onChange={() => handleProductToggle(product.name)}
+              checked={selectedProducts.includes(product._id)}
+              onChange={() => handleProductToggle(product._id)}
               className="rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
             />
             <div className="flex-1">

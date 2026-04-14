@@ -26,18 +26,10 @@ export interface DiscountedProduct {
 export class SupabaseSaleDiscountService {
   static async getActiveSales(): Promise<SaleDiscount[]> {
     try {
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .eq('is_active', true)
-        .lte('start_date', new Date().toISOString())
-        .gte('end_date', new Date().toISOString())
-        .order('priority', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      // Use the same logic as SaleService.getActive()
+      const sales = await SaleService.getActive();
       
-      return (data || []).map((sale: any) => ({
+      return sales.map((sale: any) => ({
         id: sale.id,
         title: sale.title,
         discount_type: sale.discount_type,
@@ -115,9 +107,10 @@ export class SupabaseSaleDiscountService {
           productId: product.id,
           productSaleId: product.sale_id,
           saleId: sale.id,
-          result: product.sale_id === sale.id
+          applicableProducts: sale.applicable_products,
+          result: sale.applicable_products?.includes(product.id) || product.sale_id === sale.id
         });
-        return product.sale_id === sale.id;
+        return sale.applicable_products?.includes(product.id) || product.sale_id === sale.id;
       
       default:
         return false;

@@ -68,6 +68,15 @@ export class ProductService {
     if (error) throw error;
   }
 
+  static async updateBySaleId(saleId: string, updates: { sale_id: null }) {
+    const { error } = await supabase
+      .from('products')
+      .update(updates)
+      .eq('sale_id', saleId);
+
+    if (error) throw error;
+  }
+
   static async getCategories(): Promise<string[]> {
     const { data, error } = await supabase
       .from('products')

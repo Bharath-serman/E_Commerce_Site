@@ -41,8 +41,17 @@ async function getActiveSales() {
 export default async function HomePage() {
   const products = await getProducts();
   const activeSales = await getActiveSales();
+  
+  // Get active discounts
+  let activeDiscounts: any[] = [];
+  try {
+    const { DiscountService } = await import('@/lib/discountService');
+    activeDiscounts = await DiscountService.getActiveDiscounts();
+  } catch (error) {
+    console.error('Error fetching discounts:', error);
+  }
 
-  // Filter products with discounts for Sale Items section
+  // Filter products with sales for Sale Items section
   const saleProducts = products.filter((product) => {
     return activeSales.some((sale) => {
       if (sale.discount_type === 'site-wide') return true;
@@ -50,10 +59,26 @@ export default async function HomePage() {
         return sale.applicable_categories?.includes(product.category);
       }
       if (sale.discount_type === 'product-specific') {
-        return product.sale_id === sale.id;
+        return sale.applicable_products?.includes(product.id) || product.sale_id === sale.id;
       }
       return false;
     });
+  });
+
+  // Filter products with discounts for Discount Items section
+  const discountProducts = products.filter((product) => {
+    return activeDiscounts.some((discount) => {
+      if (discount.type === 'percentage' || discount.type === 'fixed') {
+        return discount.applicable_products?.includes(product.id);
+      }
+      return false;
+    });
+  });
+
+  // All products excluding only those with sales (discounts stay in all products)
+  const regularProducts = products.filter((product) => {
+    const hasSale = saleProducts.some(saleProduct => saleProduct._id === product._id);
+    return !hasSale;
   });
 
   return (
@@ -103,6 +128,14 @@ export default async function HomePage() {
               >
                 Shop Sale Items
               </Link>
+              {discountProducts.length > 0 && (
+                <Link 
+                  href="#discount-items" 
+                  className="border-2 border-white text-white px-12 py-5 text-sm tracking-[0.3em] uppercase font-bold hover:bg-white hover:text-black transition-all duration-300 rounded-sm hover:scale-105 transform"
+                >
+                  Shop Discount Items
+                </Link>
+              )}
               <Link 
                 href="/search" 
                 className="border-2 border-white text-white px-12 py-5 text-sm tracking-[0.3em] uppercase font-bold hover:bg-white hover:text-black transition-all duration-300 rounded-sm hover:scale-105 transform"
@@ -134,6 +167,26 @@ export default async function HomePage() {
         </section>
       )}
 
+      {/* Discount Items Section */}
+      {discountProducts.length > 0 && (
+        <section id="discount-items" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 w-full">
+          <div className="flex justify-between items-end mb-16">
+            <h2 className="text-4xl text-zinc-900 font-playfair font-medium tracking-tight">
+              Discount Items
+            </h2>
+            <Link href="/discount-items" className="text-sm font-semibold uppercase tracking-widest text-zinc-500 hover:text-black transition-colors border-b border-transparent hover:border-black pb-1">
+              View All
+            </Link>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-16">
+            {discountProducts.map((product) => (
+              <ProductCard key={product._id} product={product} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* All Products Section */}
       <section id="all-products" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 w-full">
         <div className="flex justify-between items-end mb-16">
@@ -145,7 +198,7 @@ export default async function HomePage() {
           </Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-16">
-          {products.map((product) => (
+          {regularProducts.map((product) => (
             <ProductCard key={product._id} product={product} />
           ))}
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { DiscountService } from '@/lib/discountService';
 
 interface DiscountBadgeProps {
   productId: string;
@@ -15,58 +16,96 @@ export default function DiscountBadge({ productId, productName, price, category,
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSaleDiscount = async () => {
+    const fetchDiscounts = async () => {
       try {
-        const res = await fetch('/api/sale-discounts');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) {
-            // Find applicable sale for this product by checking all active sales
-            const applicableSale = data.data.find((sale: any) => {
+        // Check both sales and discounts
+        const [salesRes, discounts] = await Promise.all([
+          fetch('/api/sale-discounts'),
+          DiscountService.getActiveDiscounts()
+        ]);
+
+        let bestDiscount: any = null;
+        let bestSavings = 0;
+
+        // Check sales
+        if (salesRes.ok) {
+          const salesData = await salesRes.json();
+          if (salesData.success) {
+            const applicableSale = salesData.data.find((sale: any) => {
               if (sale.discount_type === 'site-wide') return true;
               if (sale.discount_type === 'category' && category) {
                 return sale.applicable_categories.includes(category);
               }
               if (sale.discount_type === 'product-specific') {
-                console.log('DiscountBadge product-specific sale check:', {
-                  productId,
-                  productSaleId: sale_id,
-                  saleId: sale.id,
-                  result: sale_id === sale.id
-                });
-                return sale_id === sale.id;
+                return sale.applicable_products?.includes(productId) || sale_id === sale.id;
               }
               return false;
             });
-            setSale(applicableSale || null);
+            
+            if (applicableSale) {
+              const savings = price * (applicableSale.discount_value / 100);
+              if (savings > bestSavings) {
+                bestDiscount = { ...applicableSale, type: 'sale' };
+                bestSavings = savings;
+              }
+            }
           }
         }
+
+        // Check discounts
+        if (discounts.length > 0) {
+          const applicableDiscount = discounts.find(discount => 
+            DiscountService.getApplicableDiscount(discount, productId, price)
+          );
+          
+          if (applicableDiscount) {
+            const discountedPrice = DiscountService.calculateDiscountedPrice(price, applicableDiscount);
+            const savings = price - discountedPrice;
+            if (savings > bestSavings) {
+              bestDiscount = { ...applicableDiscount, type: 'discount' };
+              bestSavings = savings;
+            }
+          }
+        }
+
+        setSale(bestDiscount);
       } catch (error) {
-        console.error('Error fetching sale discount:', error);
+        console.error('Error fetching discounts:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSaleDiscount();
-  }, [productId, productName, category, sale_id]);
+    fetchDiscounts();
+  }, [productId, productName, price, category, sale_id]);
 
   if (loading || !sale) {
     return null;
   }
 
-  const calculateDiscountedPrice = () => {
-    const discountAmount = price * (sale.discount_value / 100);
-    return Math.max(0, price - discountAmount);
+  const calculateSavings = () => {
+    if (sale.type === 'sale') {
+      const discountAmount = price * (sale.discount_value / 100);
+      return {
+        percentage: `${sale.discount_value}%`,
+        savings: discountAmount
+      };
+    } else {
+      const discountedPrice = DiscountService.calculateDiscountedPrice(price, sale);
+      const savings = price - discountedPrice;
+      return {
+        percentage: sale.type === 'percentage' ? `${sale.value}%` : `$${sale.value}`,
+        savings: savings
+      };
+    }
   };
 
-  const discountedPrice = calculateDiscountedPrice();
-  const savings = price - discountedPrice;
+  const { percentage, savings } = calculateSavings();
 
   return (
     <div className="absolute top-2 right-2 z-10">
       <div className="bg-red-500 text-white px-2 py-1 rounded-sm text-xs font-bold uppercase tracking-wider shadow-lg">
-        {sale.discount_value}% OFF
+        {percentage} OFF
       </div>
       <div className="mt-1 bg-green-600 text-white px-2 py-1 rounded-sm text-xs font-bold">
         Save ${savings.toFixed(2)}
