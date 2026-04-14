@@ -9,6 +9,8 @@ CREATE TABLE products (
   image VARCHAR(500) NOT NULL,
   details TEXT[] DEFAULT '{}',
   category VARCHAR(100) DEFAULT 'uncategorized',
+  sale_id UUID REFERENCES sales(id),
+  discount_id UUID REFERENCES discounts(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -48,6 +50,23 @@ CREATE TABLE orders (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Discounts table
+CREATE TABLE discounts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  type VARCHAR(20) NOT NULL CHECK (type IN ('percentage', 'fixed')),
+  value DECIMAL(10,2) NOT NULL CHECK (value >= 0),
+  applicable_products UUID[] DEFAULT '{}',
+  min_order_value DECIMAL(10,2),
+  max_discount_amount DECIMAL(10,2),
+  start_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  end_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  usage_limit INTEGER,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for better performance
 CREATE INDEX idx_products_category ON products(category);
 CREATE INDEX idx_products_name ON products(name);
@@ -61,6 +80,7 @@ CREATE INDEX idx_orders_stripe_session ON orders(stripe_session_id);
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE discounts ENABLE ROW LEVEL SECURITY;
 
 -- Policies for public read access
 CREATE POLICY "Public products are viewable by everyone" ON products
@@ -70,6 +90,9 @@ CREATE POLICY "Public sales are viewable by everyone" ON sales
   FOR SELECT USING (true);
 
 CREATE POLICY "Public orders are viewable by everyone" ON orders
+  FOR SELECT USING (true);
+
+CREATE POLICY "Public discounts are viewable by everyone" ON discounts
   FOR SELECT USING (true);
 
 -- Policies for inserts (you may want to restrict these in production)
@@ -82,6 +105,9 @@ CREATE POLICY "Enable insert for all users" ON sales
 CREATE POLICY "Enable insert for all users" ON orders
   FOR INSERT WITH CHECK (true);
 
+CREATE POLICY "Enable insert for all users" ON discounts
+  FOR INSERT WITH CHECK (true);
+
 -- Policies for updates (you may want to restrict these in production)
 CREATE POLICY "Enable update for all users" ON products
   FOR UPDATE USING (true) WITH CHECK (true);
@@ -92,6 +118,9 @@ CREATE POLICY "Enable update for all users" ON sales
 CREATE POLICY "Enable update for all users" ON orders
   FOR UPDATE USING (true) WITH CHECK (true);
 
+CREATE POLICY "Enable update for all users" ON discounts
+  FOR UPDATE USING (true) WITH CHECK (true);
+
 -- Policies for deletes (you may want to restrict these in production)
 CREATE POLICY "Enable delete for all users" ON products
   FOR DELETE USING (true);
@@ -100,6 +129,9 @@ CREATE POLICY "Enable delete for all users" ON sales
   FOR DELETE USING (true);
 
 CREATE POLICY "Enable delete for all users" ON orders
+  FOR DELETE USING (true);
+
+CREATE POLICY "Enable delete for all users" ON discounts
   FOR DELETE USING (true);
 
 -- Function to automatically update updated_at timestamp
@@ -122,4 +154,8 @@ CREATE TRIGGER update_sales_updated_at
 
 CREATE TRIGGER update_orders_updated_at 
   BEFORE UPDATE ON orders 
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_discounts_updated_at 
+  BEFORE UPDATE ON discounts 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

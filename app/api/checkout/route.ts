@@ -14,20 +14,69 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No items in cart" }, { status: 400 });
     }
 
-    // Apply sale discounts automatically
+    // Apply both sale discounts and regular discounts automatically
     let discountAmount = 0;
     let discountResult: any = null;
     let appliedDiscounts: any[] = [];
     
     try {
+      // Apply sale discounts
       const { SupabaseSaleDiscountService } = await import('@/lib/supabaseSaleDiscountService');
-      discountResult = await SupabaseSaleDiscountService.calculateCartDiscount(items);
+      const saleDiscountResult = await SupabaseSaleDiscountService.calculateCartDiscount(items);
+      
+      // Apply regular discounts
+      const { DiscountService } = await import('@/lib/discountService');
+      const regularDiscountResult = await DiscountService.calculateCartDiscount(items);
+      
+      console.log('Checkout - Sale discounts:', saleDiscountResult);
+      console.log('Checkout - Regular discounts:', regularDiscountResult);
+      
+      // Combine results and find best discount for each item
+      const combinedDiscountedItems = items.map((item: any) => {
+        const saleItem = saleDiscountResult.discountedItems.find((d: any) => d.id === item.id);
+        const regularItem = regularDiscountResult.discountedItems.find((d: any) => d.id === item.id);
+        
+        // Find the best price (lowest)
+        let bestItem = item;
+        let bestPrice = item.price;
+        let bestDiscount = null;
+        
+        if (saleItem && saleItem.discountedPrice < bestPrice) {
+          bestPrice = saleItem.discountedPrice;
+          bestDiscount = saleItem.discount;
+        }
+        
+        if (regularItem && regularItem.discountedPrice < bestPrice) {
+          bestPrice = regularItem.discountedPrice;
+          bestDiscount = regularItem.discount;
+        }
+        
+        return {
+          id: item.id,
+          name: item.name,
+          originalPrice: item.price,
+          discountedPrice: bestPrice,
+          quantity: item.quantity,
+          discount: bestDiscount
+        };
+      });
+      
+      // Calculate total discount
+      discountResult = {
+        discountedItems: combinedDiscountedItems,
+        totalDiscount: combinedDiscountedItems.reduce((total: number, item: any) => {
+          return total + ((item.originalPrice - item.discountedPrice) * item.quantity);
+        }, 0)
+      };
+      
       discountAmount = discountResult.totalDiscount;
       appliedDiscounts = discountResult.discountedItems
         .filter((item: any) => item.discount)
         .map((item: any) => item.discount);
+        
+      console.log('Checkout - Final combined discounts:', discountResult);
     } catch (error) {
-      console.error('Error applying sale discounts:', error);
+      console.error('Error applying discounts:', error);
     }
 
     const line_items = items.map((item: any) => {
@@ -36,13 +85,25 @@ export async function POST(req: Request) {
       const finalPrice = discountedItem ? discountedItem.discountedPrice : item.price;
       const itemDiscount = discountedItem?.discount;
       
+      console.log('Checkout - Processing item:', {
+        name: item.name,
+        id: item.id,
+        discountedItem,
+        itemDiscount,
+        finalPrice
+      });
+      
       return {
         price_data: {
           currency: 'usd',
           product_data: { 
             name: item.name,
             images: [item.image],
-            description: itemDiscount ? `Sale discount applied: ${itemDiscount.discount_value}% OFF` : undefined,
+            description: itemDiscount ? 
+              (itemDiscount.discount_type ? 
+                `Sale discount applied: ${itemDiscount.discount_value}% OFF` :
+                `Discount applied: ${itemDiscount.type === 'percentage' ? itemDiscount.value + '%' : '$' + itemDiscount.value}`) 
+              : undefined,
           },
           unit_amount: Math.round(finalPrice * 100), // Stripe expects cents
         },

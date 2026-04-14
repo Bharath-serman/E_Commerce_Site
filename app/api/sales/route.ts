@@ -26,6 +26,17 @@ export async function POST(req: Request) {
     
     const newSale = await SaleService.create(dbSaleData);
     
+    // Update products to reference this sale for product-specific sales
+    if (saleData.applicableProducts && saleData.applicableProducts.length > 0 && saleData.discountType === 'product-specific') {
+      const { ProductService } = await import('@/lib/supabaseModels');
+      console.log('Updating sale_id for products:', saleData.applicableProducts);
+      
+      for (const productId of saleData.applicableProducts) {
+        await ProductService.update(productId, { sale_id: newSale.id });
+      }
+      console.log('Sale_id updated for products');
+    }
+    
     return NextResponse.json({ success: true, data: newSale });
   } catch (error: any) {
     console.error("Sale creation error:", error);
@@ -47,6 +58,12 @@ export async function PUT(req: Request) {
   try {
     const { id, ...updateData } = await req.json();
     
+    // First, get the current sale to see which products were previously associated
+    const currentSale = await SaleService.getById(id);
+    if (!currentSale) {
+      return NextResponse.json({ success: false, error: 'Sale not found' }, { status: 404 });
+    }
+    
     // Convert frontend naming to database naming
     const dbUpdateData = {
       title: updateData.title,
@@ -54,8 +71,8 @@ export async function PUT(req: Request) {
       banner_text: updateData.bannerText,
       discount_type: updateData.discountType,
       discount_value: updateData.discountValue,
-      start_date: updateData.startDate,
-      end_date: updateData.endDate,
+      start_date: new Date(updateData.startDate).toISOString(),
+      end_date: new Date(updateData.endDate).toISOString(),
       is_active: updateData.isActive,
       banner_image: updateData.bannerImage,
       background_color: updateData.backgroundColor,
@@ -72,6 +89,43 @@ export async function PUT(req: Request) {
       return NextResponse.json({ success: false, error: 'Sale not found' }, { status: 404 });
     }
     
+    // Handle product relationships for product-specific sales
+    if (updateData.discountType === 'product-specific') {
+      const { ProductService } = await import('@/lib/supabaseModels');
+      
+      const oldProducts = currentSale.applicable_products || [];
+      const newProducts = updateData.applicableProducts || [];
+      
+      console.log('Managing sale product relationships:', { oldProducts, newProducts });
+      
+      // Remove sale_id from products that are no longer selected
+      const productsToRemove = oldProducts.filter((productId: string) => !newProducts.includes(productId));
+      if (productsToRemove.length > 0) {
+        console.log('Removing sale_id from products:', productsToRemove);
+        for (const productId of productsToRemove) {
+          await ProductService.update(productId, { sale_id: undefined });
+        }
+      }
+      
+      // Add sale_id to newly selected products
+      const productsToAdd = newProducts.filter((productId: string) => !oldProducts.includes(productId));
+      if (productsToAdd.length > 0) {
+        console.log('Adding sale_id to products:', productsToAdd);
+        for (const productId of productsToAdd) {
+          await ProductService.update(productId, { sale_id: id });
+        }
+      }
+    } else {
+      // If sale type is not product-specific, remove sale_id from all previously associated products
+      if (currentSale.applicable_products && currentSale.applicable_products.length > 0) {
+        const { ProductService } = await import('@/lib/supabaseModels');
+        console.log('Removing sale_id from all products (sale type changed from product-specific)');
+        for (const productId of currentSale.applicable_products) {
+          await ProductService.update(productId, { sale_id: undefined });
+        }
+      }
+    }
+    
     return NextResponse.json({ success: true, data: sale });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
@@ -83,14 +137,39 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     
+    console.log('DELETE request received for sale ID:', id);
+    
     if (!id) {
+      console.log('No ID provided in request');
       return NextResponse.json({ success: false, error: 'Sale ID required' }, { status: 400 });
     }
     
+    console.log('Attempting to delete sale:', id);
+    
+    // First, remove sale_id from all products that reference this sale
+    const { ProductService } = await import('@/lib/supabaseModels');
+    console.log('Removing sale_id from products...');
+    await ProductService.updateBySaleId(id, { sale_id: null });
+    console.log('Sale_id removed from products');
+    
+    // Now delete the sale
     await SaleService.delete(id);
+    console.log('Sale deleted successfully:', id);
     
     return NextResponse.json({ success: true, message: 'Sale deleted successfully' });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error('Delete sale error:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      stack: error.stack
+    });
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message,
+      details: error.details,
+      code: error.code
+    }, { status: 500 });
   }
 }

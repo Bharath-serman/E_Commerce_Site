@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import ConfirmPopup from './ConfirmPopup';
 
 export default function SaleManagement() {
   const [sales, setSales] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingSale, setEditingSale] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; saleId: string; saleTitle: string }>({ show: false, saleId: '', saleTitle: '' });
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -75,10 +78,10 @@ export default function SaleManagement() {
       const payload = {
         ...formData,
         discountValue: parseFloat(formData.discountValue),
-        startDate: new Date(formData.startDate),
-        endDate: new Date(formData.endDate),
+        startDate: formData.startDate,
+        endDate: formData.endDate,
         priority: parseInt(formData.priority.toString()),
-        ...(editingSale && { id: editingSale._id })
+        ...(editingSale && { id: editingSale.id })
       };
 
       const url = '/api/sales';
@@ -106,34 +109,44 @@ export default function SaleManagement() {
     setFormData({
       title: sale.title,
       description: sale.description,
-      bannerText: sale.bannerText,
-      discountType: sale.discountType,
-      discountValue: sale.discountValue.toString(),
-      startDate: new Date(sale.startDate).toISOString().split('T')[0],
-      endDate: new Date(sale.endDate).toISOString().split('T')[0],
-      isActive: sale.isActive,
-      bannerImage: sale.bannerImage || '',
-      backgroundColor: sale.backgroundColor || '#000000',
-      textColor: sale.textColor || '#ffffff',
-      showCountdown: sale.showCountdown,
+      bannerText: sale.banner_text || '',
+      discountType: sale.discount_type,
+      discountValue: sale.discount_value.toString(),
+      startDate: new Date(sale.start_date).toISOString().split('T')[0],
+      endDate: new Date(sale.end_date).toISOString().split('T')[0],
+      isActive: sale.is_active,
+      bannerImage: sale.banner_image || '',
+      backgroundColor: sale.background_color || '#000000',
+      textColor: sale.text_color || '#ffffff',
+      showCountdown: sale.show_countdown,
       priority: sale.priority,
-      applicableCategories: sale.applicableCategories || [],
-      applicableProducts: sale.applicableProducts || []
+      applicableCategories: sale.applicable_categories || [],
+      applicableProducts: sale.applicable_products || []
     });
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this sale?')) return;
+  const handleDelete = (id: string, title: string) => {
+    setDeleteConfirm({ show: true, saleId: id, saleTitle: title });
+  };
 
+  const confirmDelete = async () => {
     try {
-      const res = await fetch(`/api/sales?id=${id}`, { method: 'DELETE' });
+      setDeleteLoading(true);
+      const res = await fetch(`/api/sales?id=${deleteConfirm.saleId}`, { method: 'DELETE' });
       if (res.ok) {
         await fetchSales();
+        setDeleteConfirm({ show: false, saleId: '', saleTitle: '' });
       }
     } catch (error) {
       console.error('Error deleting sale:', error);
+    } finally {
+      setDeleteLoading(false);
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirm({ show: false, saleId: '', saleTitle: '' });
   };
 
   const resetForm = () => {
@@ -466,18 +479,18 @@ export default function SaleManagement() {
           </thead>
           <tbody className="bg-white divide-y divide-zinc-200">
             {sales.map((sale) => (
-              <tr key={sale._id} className="hover:bg-zinc-50">
+              <tr key={sale.id} className="hover:bg-zinc-50">
                 <td className="px-6 py-4 text-sm font-medium text-zinc-900">{sale.title}</td>
-                <td className="px-6 py-4 text-sm text-zinc-500">{sale.bannerText}</td>
-                <td className="px-6 py-4 text-sm text-zinc-500">{sale.discountValue}%</td>
+                <td className="px-6 py-4 text-sm text-zinc-500">{sale.banner_text || 'No banner text'}</td>
+                <td className="px-6 py-4 text-sm text-zinc-500">{sale.discount_value}%</td>
                 <td className="px-6 py-4 text-sm text-zinc-500">
-                  {new Date(sale.startDate).toLocaleDateString()} - {new Date(sale.endDate).toLocaleDateString()}
+                  {new Date(sale.start_date).toLocaleDateString()} - {new Date(sale.end_date).toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs font-bold rounded-full ${
-                    sale.isActive ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                    sale.is_active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                   }`}>
-                    {sale.isActive ? 'Active' : 'Inactive'}
+                    {sale.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm">
@@ -488,7 +501,7 @@ export default function SaleManagement() {
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDelete(sale._id)}
+                    onClick={() => handleDelete(sale.id, sale.title)}
                     className="text-red-600 hover:text-red-800"
                   >
                     Delete
@@ -499,6 +512,18 @@ export default function SaleManagement() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmPopup
+        show={deleteConfirm.show}
+        title="Confirm Delete"
+        message={`Are you sure you want to delete the sale "${deleteConfirm.saleTitle}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
+        loading={deleteLoading}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

@@ -37,12 +37,22 @@ export default async function ProductPage({ params }: { params: { id: string } }
     return notFound();
   }
 
-  // Fetch active sales to calculate discounted price
+  // Fetch active sales and discounts to calculate discounted price
   let discountedPrice = null;
   let applicableSale = null;
+  let applicableDiscount = null;
   
   try {
-    console.log('ProductPage fetching discount for:', { productId: product.id, productName: product.name, category: product.category });
+    console.log('ProductPage fetching discounts for:', { productId: product.id, productName: product.name, category: product.category });
+    
+    // Test discount API directly
+    console.log('Testing discount API...');
+    const baseUrl = process.env.NODE_ENV === 'production' ? 'https://your-domain.com' : 'http://localhost:3000';
+    const discountResponse = await fetch(`${baseUrl}/api/discounts`);
+    const discountData = await discountResponse.json();
+    console.log('Discount API response:', discountData);
+    
+    // Check sales
     const { SupabaseSaleDiscountService } = await import('@/lib/supabaseSaleDiscountService');
     const activeSales = await SupabaseSaleDiscountService.getActiveSales();
     console.log('ProductPage active sales:', activeSales);
@@ -64,12 +74,39 @@ export default async function ProductPage({ params }: { params: { id: string } }
     applicableSale = SupabaseSaleDiscountService.findBestSaleForProduct(productForService, activeSales);
     console.log('ProductPage found applicable sale:', applicableSale);
     
+    // Check discounts
+    const { DiscountService } = await import('@/lib/discountService');
+    const activeDiscounts = await DiscountService.getActiveDiscounts();
+    console.log('ProductPage active discounts:', activeDiscounts);
+    
+    applicableDiscount = activeDiscounts.find(discount => 
+      DiscountService.getApplicableDiscount(discount, product.id, product.price)
+    );
+    console.log('ProductPage found applicable discount:', applicableDiscount);
+    
+    // Calculate best price (sale vs discount)
+    let salePrice = product.price;
+    let discountPrice = product.price;
+    
     if (applicableSale) {
-      discountedPrice = SupabaseSaleDiscountService.calculateDiscountedPrice(product.price, applicableSale);
-      console.log('ProductPage calculated discounted price:', { original: product.price, discounted: discountedPrice });
+      salePrice = SupabaseSaleDiscountService.calculateDiscountedPrice(product.price, applicableSale);
+      console.log('ProductPage calculated sale price:', { original: product.price, sale: salePrice });
     }
+    
+    if (applicableDiscount) {
+      discountPrice = DiscountService.calculateDiscountedPrice(product.price, applicableDiscount);
+      console.log('ProductPage calculated discount price:', { original: product.price, discount: discountPrice });
+    }
+    
+    // Use the better price
+    const bestPrice = Math.min(salePrice, discountPrice);
+    if (bestPrice < product.price) {
+      discountedPrice = bestPrice;
+      console.log('ProductPage final discounted price:', { original: product.price, final: discountedPrice });
+    }
+    
   } catch (error) {
-    console.error('Error fetching discount for product:', error);
+    console.error('Error fetching discounts for product:', error);
   }
 
   return (
