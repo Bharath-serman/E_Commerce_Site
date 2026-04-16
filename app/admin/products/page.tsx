@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
 import StatusModal from '@/components/StatusModal';
+import { uploadImage } from '@/lib/supabaseStorage';
 
 export default function ManageProducts() {
   const [products, setProducts] = useState<any[]>([]);
@@ -21,14 +22,36 @@ export default function ManageProducts() {
     message: ''
   });
 
+  // File Upload State
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Form State
   const [formData, setFormData] = useState({
     name: '',
     price: '',
     description: '',
     image: '',
-    details: ''
+    details: '',
+    category: 'uncategorized'
   });
+
+  // Hardcoded categories
+  const CATEGORIES = [
+    'uncategorized',
+    'clothing',
+    'accessories',
+    'footwear',
+    'electronics',
+    'home',
+    'beauty',
+    'sports',
+    'books',
+    'toys'
+  ];
 
   const fetchProducts = async () => {
     try {
@@ -44,17 +67,97 @@ export default function ManageProducts() {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      // Create preview URL
+      const preview = URL.createObjectURL(file);
+      setPreviewUrl(preview);
+      // Clear the manual image URL when a file is selected
+      setFormData({ ...formData, image: '' });
+    }
+  };
+
+  const handleUploadImage = async () => {
+    if (!selectedFile) return null;
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const result = await uploadImage(selectedFile);
+      
+      if (result.error) {
+        setStatus({
+          isOpen: true,
+          type: 'error',
+          title: 'Upload Failed',
+          message: result.error
+        });
+        return null;
+      }
+
+      setUploadProgress(100);
+      setFormData({ ...formData, image: result.url });
+      return result.url;
+    } catch (error) {
+      setStatus({
+        isOpen: true,
+        type: 'error',
+        title: 'Upload Error',
+        message: 'Failed to upload image to storage'
+      });
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
+      // Upload image if a file is selected
+      let imageUrl = formData.image;
+      if (selectedFile) {
+        const uploadedUrl = await handleUploadImage();
+        if (!uploadedUrl) {
+          setSubmitting(false);
+          return;
+        }
+        imageUrl = uploadedUrl;
+      }
+
+      // Validate that we have an image URL
+      if (!imageUrl) {
+        setStatus({
+          isOpen: true,
+          type: 'error',
+          title: 'Image Required',
+          message: 'Please either upload an image or provide an image URL.'
+        });
+        setSubmitting(false);
+        return;
+      }
+
       const productData = {
         ...formData,
+        image: imageUrl,
         price: parseFloat(formData.price),
         details: formData.details.split(',').map(d => d.trim()).filter(d => d !== '')
       };
@@ -73,7 +176,9 @@ export default function ManageProducts() {
           title: 'Registration Successful',
           message: `${formData.name} has been added to your storefront inventory.`
         });
-        setFormData({ name: '', price: '', description: '', image: '', details: '' });
+        setFormData({ name: '', price: '', description: '', image: '', details: '', category: 'uncategorized' });
+        setSelectedFile(null);
+        setPreviewUrl('');
         fetchProducts(); // Refresh list
       } else {
         setStatus({
@@ -178,15 +283,80 @@ export default function ManageProducts() {
               />
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Image URL</label>
-              <input
-                required
-                type="text"
-                value={formData.image}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+              <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Category</label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
-                placeholder="https://images.unsplash.com/..."
-              />
+              >
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat} className="capitalize">
+                    {cat === 'uncategorized' ? 'Select Category' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Product Image</label>
+              
+              {/* File Upload Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="flex-1 border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50 file:mr-4 file:py-1 file:px-4 file:rounded-sm file:border-0 file:text-xs file:font-semibold file:bg-black file:text-white hover:file:bg-zinc-800"
+                  />
+                  {selectedFile && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedFile(null);
+                        setPreviewUrl('');
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = '';
+                        }
+                      }}
+                      className="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors bg-red-50 px-3 py-2 rounded-sm border border-red-100"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Image Preview */}
+                {(previewUrl || formData.image) && (
+                  <div className="relative">
+                    <img
+                      src={previewUrl || formData.image}
+                      alt="Preview"
+                      className="w-full h-48 object-cover rounded-sm border border-zinc-200"
+                    />
+                    {uploading && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-sm">
+                        <div className="text-white text-xs font-bold uppercase tracking-widest">
+                          Uploading... {uploadProgress}%
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Manual URL Input (fallback) */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-zinc-400 uppercase tracking-wider">Or paste URL:</span>
+                  <input
+                    type="text"
+                    value={!selectedFile ? formData.image : ''}
+                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    disabled={!!selectedFile}
+                    className="flex-1 border border-zinc-200 p-2 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50 disabled:bg-zinc-100 disabled:text-zinc-400"
+                    placeholder="https://images.unsplash.com/..."
+                  />
+                </div>
+              </div>
             </div>
           </div>
           <div className="space-y-6">

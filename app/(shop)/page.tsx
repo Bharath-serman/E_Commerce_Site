@@ -122,12 +122,14 @@ export default async function HomePage() {
               Discover a curated collection of premium essentials designed for the modern lifestyle.
             </p>
             <div className="flex gap-6 flex-col sm:flex-row items-center">
-              <Link 
-                href="#sale-items" 
-                className="border-2 border-white text-white px-12 py-5 text-sm tracking-[0.3em] uppercase font-bold hover:bg-white hover:text-black transition-all duration-300 rounded-sm hover:scale-105 transform"
-              >
-                Shop Sale Items
-              </Link>
+              {saleProducts.length > 0 && (
+                <Link 
+                  href="#sale-items" 
+                  className="border-2 border-white text-white px-12 py-5 text-sm tracking-[0.3em] uppercase font-bold hover:bg-white hover:text-black transition-all duration-300 rounded-sm hover:scale-105 transform"
+                >
+                  Shop Sale Items
+                </Link>
+              )}
               {discountProducts.length > 0 && (
                 <Link 
                   href="#discount-items" 
