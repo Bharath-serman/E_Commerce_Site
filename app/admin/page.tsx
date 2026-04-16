@@ -3,13 +3,20 @@
 import { useEffect, useState } from 'react';
 import DiscountManagement from '@/components/DiscountManagement';
 import SaleManagement from '@/components/SaleManagement';
+import dynamic from 'next/dynamic';
+
+// Dynamically import ManageProducts to avoid SSR issues
+const ManageProducts = dynamic(() => import('./products/page'), {
+  ssr: false,
+  loading: () => <div className="text-center text-zinc-400 text-xs tracking-widest uppercase animate-pulse">Loading...</div>
+});
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'orders' | 'discounts' | 'sales'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'discounts' | 'sales' | 'products'>('orders');
 
   const fetchOrders = () => {
     setLoading(true);
@@ -60,6 +67,8 @@ export default function AdminDashboard() {
         return <DiscountManagement />;
       case 'sales':
         return <SaleManagement />;
+      case 'products':
+        return <ManageProducts />;
       default:
         return (
           <div>
@@ -200,6 +209,16 @@ export default function AdminDashboard() {
           }`}
         >
           Sales
+        </button>
+        <button
+          onClick={() => setActiveTab('products')}
+          className={`px-6 py-2 text-xs uppercase font-bold tracking-widest transition-colors rounded-sm ${
+            activeTab === 'products'
+              ? 'bg-white text-black shadow-sm'
+              : 'text-zinc-500 hover:text-black'
+          }`}
+        >
+          Products
         </button>
       </div>
 
