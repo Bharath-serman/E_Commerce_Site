@@ -30,6 +30,9 @@ export default function AdminSidebar() {
         <Link href="/admin/products" className={getLinkClass('/admin/products')}>
           Manage Inventory
         </Link>
+        <Link href="/admin/analytics" className={getLinkClass('/admin/analytics')}>
+          Analytics
+        </Link>
         <Link href="/" className="block px-4 py-3 rounded-md text-zinc-400 text-sm font-medium hover:bg-zinc-800 hover:text-white transition-colors">
           View Store
         </Link>
