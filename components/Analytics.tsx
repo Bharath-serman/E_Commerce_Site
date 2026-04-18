@@ -210,7 +210,7 @@ export default function Analytics() {
       <div className="bg-white border border-zinc-200 rounded-sm p-6 mb-8">
         <h3 className="text-lg font-medium mb-4">Top Pages</h3>
         <div className="space-y-3">
-          {analyticsData?.topPages?.map((page: any, index: number) => (
+          {analyticsData?.topPages?.slice(0, 5).map((page: any, index: number) => (
             <div key={index} className="flex items-center justify-between p-3 bg-zinc-50 rounded-sm">
               <div className="flex items-center gap-4">
                 <span className="text-xs font-bold text-zinc-400 w-6">#{index + 1}</span>
