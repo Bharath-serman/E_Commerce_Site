@@ -75,11 +75,8 @@ export default async function HomePage() {
     });
   });
 
-  // All products excluding only those with sales (discounts stay in all products)
-  const regularProducts = products.filter((product) => {
-    const hasSale = saleProducts.some(saleProduct => saleProduct._id === product._id);
-    return !hasSale;
-  });
+  // All products - show all products regardless of sales
+  const regularProducts = products;
 
   return (
     <main className="flex-grow w-full">
