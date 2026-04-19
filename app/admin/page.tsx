@@ -17,6 +17,9 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'orders' | 'discounts' | 'sales' | 'products'>('orders');
+  const [viewAll, setViewAll] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 9;
 
   const fetchOrders = () => {
     setLoading(true);
@@ -59,7 +62,21 @@ export default function AdminDashboard() {
   const handleReset = () => {
     setSearchTerm('');
     setFilteredOrders(orders);
+    setCurrentPage(1);
+    setViewAll(false);
   };
+
+  const handleViewAll = () => {
+    setViewAll(!viewAll);
+    setCurrentPage(1);
+  };
+
+  // Calculate displayed orders
+  const displayedOrders = viewAll 
+    ? filteredOrders 
+    : filteredOrders.slice((currentPage - 1) * ordersPerPage, currentPage * ordersPerPage);
+  
+  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -126,7 +143,7 @@ export default function AdminDashboard() {
                         No orders found.
                       </td>
                     </tr>
-                  ) : filteredOrders.map((order) => (
+                  ) : displayedOrders.map((order) => (
                     <tr key={order._id} className="hover:bg-zinc-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col">
@@ -171,6 +188,75 @@ export default function AdminDashboard() {
                 </tbody>
               </table>
             </div>
+            
+            {/* Pagination Controls */}
+            {filteredOrders.length > 0 && (
+              <div className="flex justify-between items-center mt-4 px-2">
+                <div className="text-xs text-zinc-500">
+                  {viewAll 
+                    ? `Showing all ${filteredOrders.length} orders`
+                    : `Showing ${((currentPage - 1) * ordersPerPage) + 1} to ${Math.min(currentPage * ordersPerPage, filteredOrders.length)} of ${filteredOrders.length} orders`
+                  }
+                </div>
+                <div className="flex gap-2 items-center">
+                  {!viewAll && totalPages > 1 && (
+                    <>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="px-4 py-2 text-[10px] uppercase font-bold tracking-widest border border-zinc-200 rounded-sm hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Previous
+                      </button>
+                      <div className="flex gap-1">
+                        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setCurrentPage(pageNum)}
+                              className={`w-8 h-8 text-[10px] font-bold rounded-sm transition-colors ${
+                                currentPage === pageNum
+                                  ? 'bg-black text-white'
+                                  : 'border border-zinc-200 hover:bg-zinc-50'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="px-4 py-2 text-[10px] uppercase font-bold tracking-widest border border-zinc-200 rounded-sm hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={handleViewAll}
+                    className={`px-4 py-2 text-[10px] uppercase font-bold tracking-widest transition-colors ${
+                      viewAll 
+                        ? 'bg-black text-white' 
+                        : 'border border-zinc-200 hover:bg-zinc-50'
+                    }`}
+                  >
+                    {viewAll ? 'Show Paginated' : 'View All'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         );
     }

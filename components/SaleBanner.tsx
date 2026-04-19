@@ -106,7 +106,7 @@ export default function SaleBanner({ sale }: SaleBannerProps) {
           
           <div className="flex justify-center gap-4">
             <a 
-              href="#collection" 
+              href="#all-products" 
               className="inline-block px-6 py-2 text-sm font-bold uppercase tracking-widest rounded-sm transition-all hover:scale-105"
               style={{ 
                 color: sale.backgroundColor,
