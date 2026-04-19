@@ -15,7 +15,7 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
+    requireEmailVerification: false,
   },
   emailVerification: {
     sendVerificationEmail: async ({ user, url, token }: { user: any; url: string; token: string }, request: any) => {
@@ -34,7 +34,7 @@ export const auth = betterAuth({
       try {
         console.log("Attempting to send email via Resend...");
         const result = await resend.emails.send({
-          from: "Aesthetic <noreply@resend.dev>",
+          from: "Aesthetic <onboarding@resend.dev>",
           to: user.email,
           subject: "Verify your email address",
           html: `

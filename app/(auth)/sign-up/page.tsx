@@ -15,15 +15,6 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => {
-        router.push('/sign-in');
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [success, router]);
-
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -50,7 +41,7 @@ export default function SignUpPage() {
       if (result.error) {
         setError(result.error.message ?? 'An error occurred');
       } else {
-        setSuccess(true);
+        router.push('/');
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
