@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '@/contexts/CartContext';
+import { authClient } from '@/lib/auth-client';
+import AuthModal from './AuthModal';
 
 type ProductProps = {
   id: string;
@@ -13,8 +15,30 @@ type ProductProps = {
 export default function AddToCartButton({ product }: { product: ProductProps }) {
   const { addToCart } = useCart();
   const [added, setAdded] = useState(false);
+  const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  useEffect(() => {
+    const getSession = async () => {
+      try {
+        const data = await authClient.getSession();
+        setSession(data.data);
+      } catch (error) {
+        console.error('Error getting session:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getSession();
+  }, []);
 
   const handleAdd = () => {
+    if (!session) {
+      setShowAuthModal(true);
+      return;
+    }
     addToCart({
       id: product.id,
       name: product.name,
@@ -26,12 +50,30 @@ export default function AddToCartButton({ product }: { product: ProductProps }) 
     setTimeout(() => setAdded(false), 2000);
   };
 
+  if (loading) {
+    return (
+      <button
+        disabled
+        className="w-full bg-zinc-200 text-zinc-400 px-8 py-4 rounded-sm text-xs tracking-[0.2em] uppercase font-bold cursor-not-allowed"
+      >
+        Loading...
+      </button>
+    );
+  }
+
   return (
-    <button
-      onClick={handleAdd}
-      className={`w-full ${added ? 'bg-green-600 text-white' : 'bg-white border border-zinc-900 text-zinc-900 hover:bg-zinc-100'} px-8 py-4 rounded-sm transition-colors duration-300 text-xs tracking-[0.2em] uppercase font-bold`}
-    >
-      {added ? 'Added to Cart ✓' : 'Add to Cart'}
-    </button>
+    <>
+      <button
+        onClick={handleAdd}
+        className={`w-full ${added ? 'bg-green-600 text-white' : 'bg-white border border-zinc-900 text-zinc-900 hover:bg-zinc-100'} px-8 py-4 rounded-sm transition-colors duration-300 text-xs tracking-[0.2em] uppercase font-bold`}
+      >
+        {added ? 'Added to Cart ✓' : 'Add to Cart'}
+      </button>
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        message="Please sign in to add items to your cart."
+      />
+    </>
   );
 }

@@ -3,9 +3,52 @@
 import { useCart } from '@/contexts/CartContext';
 import Link from 'next/link';
 import CheckoutButton from '@/components/CheckoutButton';
+import { authClient } from '@/lib/auth-client';
+import { useEffect, useState } from 'react';
+import AuthModal from '@/components/AuthModal';
 
 export default function CartPage() {
   const { items, removeFromCart, updateQuantity, totalPrice, discountedItems, totalDiscount, discountedTotal } = useCart();
+  const [loading, setLoading] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const data = await authClient.getSession();
+        if (!data.data) {
+          setShowAuthModal(true);
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+        setShowAuthModal(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-zinc-400 animate-pulse uppercase text-xs tracking-widest font-light">
+          Loading...
+        </div>
+      </div>
+    );
+  }
+
+  if (showAuthModal) {
+    return (
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        message="Please sign in to access your shopping cart."
+      />
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-16 lg:px-8 w-full min-h-[calc(100vh-16rem)] flex flex-col">

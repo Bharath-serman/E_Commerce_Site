@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 export async function POST(req: Request) {
   try {
@@ -19,6 +19,7 @@ export async function POST(req: Request) {
       status: 'pending' as const
     };
 
+    const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await supabaseAdmin
       .from('support_requests')
       .insert(supportData)
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await supabaseAdmin
       .from('support_requests')
       .select('*')
