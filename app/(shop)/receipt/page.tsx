@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import jsPDF from 'jspdf';
 
 export default function ReceiptPage() {
   const searchParams = useSearchParams();
@@ -42,36 +43,85 @@ export default function ReceiptPage() {
   }, [sessionId]);
 
   const downloadReceipt = async () => {
-    if (!orderDetails?.receiptUrl) return;
+    if (!orderDetails) return;
 
     try {
       setDownloading(true);
+
+      const doc = new jsPDF();
       
-      const response = await fetch('/api/receipt/download', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ receiptUrl: orderDetails.receiptUrl }),
+      // Add title
+      doc.setFontSize(20);
+      doc.text('Order Receipt', 105, 20, { align: 'center' });
+      
+      // Add transaction ID
+      doc.setFontSize(12);
+      doc.text(`Transaction ID: ${orderDetails.transactionId}`, 105, 30, { align: 'center' });
+      
+      // Add line
+      doc.setLineWidth(0.5);
+      doc.line(20, 35, 190, 35);
+      
+      // Add customer details
+      doc.setFontSize(14);
+      doc.text('Customer Details', 20, 45);
+      doc.setFontSize(11);
+      doc.text(`Name: ${orderDetails.customerName}`, 20, 55);
+      doc.text(`Email: ${orderDetails.customerEmail}`, 20, 62);
+      
+      // Add line
+      doc.line(20, 68, 190, 68);
+      
+      // Add items
+      doc.setFontSize(14);
+      doc.text('Items Ordered', 20, 78);
+      doc.setFontSize(11);
+      
+      let y = 88;
+      orderDetails.lineItems.forEach((item: any, idx: number) => {
+        doc.text(`${item.description} (Qty: ${item.quantity})`, 20, y);
+        doc.text(`$${(item.amount_total / 100).toFixed(2)}`, 170, y);
+        y += 8;
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to download receipt');
+      
+      // Add line
+      doc.line(20, y + 5, 190, y + 5);
+      
+      // Add totals
+      y += 15;
+      doc.text(`Subtotal: $${(orderDetails.total / 100).toFixed(2)}`, 20, y);
+      
+      if (orderDetails.metadata?.discountApplied && orderDetails.metadata.discountApplied !== 'none') {
+        y += 8;
+        doc.text(`Discount Applied: -${orderDetails.metadata.discountAmount ? (parseFloat(orderDetails.metadata.discountAmount) / 100).toFixed(2) : '0.00'}`, 20, y);
+        y += 8;
+        doc.text(`Original Total: $${orderDetails.metadata.originalTotal ? (parseFloat(orderDetails.metadata.originalTotal) / 100).toFixed(2) : '0.00'}`, 20, y);
       }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `receipt-${sessionId?.slice(0, 8)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      
+      y += 12;
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text(`Total Paid: $${(orderDetails.total / 100).toFixed(2)}`, 20, y);
+      
+      // Add payment info
+      y += 20;
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(14);
+      doc.text('Payment Information', 20, y);
+      doc.setFontSize(11);
+      y += 10;
+      doc.text('Payment Status: Paid', 20, y);
+      y += 8;
+      doc.text('Payment Method: Credit Card', 20, y);
+      y += 8;
+      doc.text(`Order Date: ${new Date().toLocaleDateString()}`, 20, y);
+      
+      // Save the PDF
+      doc.save(`receipt-${sessionId?.slice(0, 8)}.pdf`);
       
     } catch (error) {
-      console.error('Error downloading receipt:', error);
-      alert('Failed to download receipt. Please try again.');
+      console.error('Error generating receipt:', error);
+      alert('Failed to generate receipt. Please try again.');
     } finally {
       setDownloading(false);
     }
