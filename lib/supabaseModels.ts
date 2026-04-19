@@ -13,6 +13,10 @@ export type Order = Database['public']['Tables']['orders']['Row'];
 export type OrderInsert = Database['public']['Tables']['orders']['Insert'];
 export type OrderUpdate = Database['public']['Tables']['orders']['Update'];
 
+export type SupportRequest = Database['public']['Tables']['support_requests']['Row'];
+export type SupportRequestInsert = Database['public']['Tables']['support_requests']['Insert'];
+export type SupportRequestUpdate = Database['public']['Tables']['support_requests']['Update'];
+
 // Product service
 export class ProductService {
   static async getAll(): Promise<Product[]> {
@@ -232,5 +236,61 @@ export class OrderService {
     }
     
     return data;
+  }
+}
+
+// Support request service
+export class SupportService {
+  static async getAll(): Promise<SupportRequest[]> {
+    const { data, error } = await supabase
+      .from('support_requests')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async getById(id: string): Promise<SupportRequest | null> {
+    const { data, error } = await supabase
+      .from('support_requests')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async create(request: SupportRequestInsert): Promise<SupportRequest> {
+    const { data, error } = await supabase
+      .from('support_requests')
+      .insert(request)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async update(id: string, updates: SupportRequestUpdate): Promise<SupportRequest> {
+    const { data, error } = await supabase
+      .from('support_requests')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('support_requests')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
   }
 }

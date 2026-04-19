@@ -9,16 +9,18 @@ function SuccessContent() {
   const { clearCart } = useCart();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
+  const orderId = searchParams.get('order_id');
 
   const [mounted, setMounted] = useState(false);
   const [orderDetails, setOrderDetails] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'upi'>('stripe');
 
   const downloadReceipt = async (receiptUrl: string) => {
     try {
       setDownloading(true);
-      
+
       const response = await fetch('/api/receipt/download', {
         method: 'POST',
         headers: {
@@ -40,7 +42,7 @@ function SuccessContent() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
     } catch (error) {
       console.error('Error downloading receipt:', error);
       alert('Failed to download receipt. Please try again.');
@@ -56,15 +58,30 @@ function SuccessContent() {
     // Clear cart context on successful arrival
     clearCart();
 
-    // Fetch securely generated Stripe session details if ID exists
-    if (sessionId) {
+    // Determine payment method
+    if (orderId) {
+      setPaymentMethod('upi');
       setLoading(true);
+      // Fetch UPI order details
+      fetch(`/api/orders/${orderId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setOrderDetails(data.order);
+          }
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    } else if (sessionId) {
+      setPaymentMethod('stripe');
+      setLoading(true);
+      // Fetch securely generated Stripe session details if ID exists
       fetch(`/api/checkout/${sessionId}`)
         .then(res => res.json())
         .then(data => {
           if (data.success) {
             setOrderDetails(data);
-            
+
             // Sync with our database
             fetch('/api/orders', {
               method: 'POST',
@@ -73,7 +90,7 @@ function SuccessContent() {
                 stripeSessionId: sessionId,
                 transactionId: data.transactionId,
                 customerName: data.customerName,
-                customerEmail: data.customerEmail, 
+                customerEmail: data.customerEmail,
                 items: data.lineItems,
                 totalAmount: data.total / 100
               })
@@ -83,7 +100,7 @@ function SuccessContent() {
         .catch(console.error)
         .finally(() => setLoading(false));
     }
-  }, [sessionId, clearCart]);
+  }, [sessionId, orderId, clearCart]);
 
   if (!mounted) return null;
 
@@ -114,9 +131,13 @@ function SuccessContent() {
             <div className="w-full">
               <div className="flex flex-col gap-6 mb-10 pb-6 border-b border-zinc-100">
                 <div className="flex justify-between items-end">
+                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Payment Method</span>
+                  <span className="text-xs font-bold text-black uppercase">{paymentMethod === 'upi' ? 'UPI' : 'Card'}</span>
+                </div>
+                <div className="flex justify-between items-end">
                   <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Transaction ID</span>
                   <span className="text-[10px] text-black font-mono font-bold bg-zinc-50 px-2 py-1 border border-zinc-100 rounded-sm">
-                    {orderDetails.transactionId}
+                    {paymentMethod === 'upi' ? orderDetails.stripe_session_id : orderDetails.transactionId}
                   </span>
                 </div>
                 <div className="flex justify-between items-end">
@@ -129,30 +150,44 @@ function SuccessContent() {
               </div>
 
               <div className="space-y-6">
-                {orderDetails.lineItems.map((item: any, idx: number) => (
-                  <div key={idx} className="flex justify-between items-start">
-                    <div className="flex flex-col">
-                      <span className="text-base font-medium text-black">{item.description}</span>
-                      <span className="text-sm text-zinc-500 font-light">Qty: {item.quantity}</span>
+                {paymentMethod === 'upi' ? (
+                  orderDetails.items?.map((item: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-start">
+                      <div className="flex flex-col">
+                        <span className="text-base font-medium text-black">{item.name}</span>
+                        <span className="text-sm text-zinc-500 font-light">Qty: {item.quantity}</span>
+                      </div>
+                      <span className="text-base font-medium text-black">
+                        ₹{((item.price || item.originalPrice) * item.quantity).toFixed(2)}
+                      </span>
                     </div>
-                    <span className="text-base font-medium text-black">
-                      ${(item.amount_total / 100).toFixed(2)}
-                    </span>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  orderDetails.lineItems.map((item: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-start">
+                      <div className="flex flex-col">
+                        <span className="text-base font-medium text-black">{item.description}</span>
+                        <span className="text-sm text-zinc-500 font-light">Qty: {item.quantity}</span>
+                      </div>
+                      <span className="text-base font-medium text-black">
+                        ${(item.amount_total / 100).toFixed(2)}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
 
               <div className="mt-12 pt-8 border-t border-zinc-200 space-y-4">
                 <div className="flex justify-between text-sm text-zinc-500">
                   <span>Subtotal</span>
-                  <span>${(orderDetails.total / 100).toFixed(2)}</span>
+                  <span>{paymentMethod === 'upi' ? `₹${orderDetails.total_amount?.toFixed(2)}` : `$${(orderDetails.total / 100).toFixed(2)}`}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold text-black pt-2">
                   <span className="uppercase tracking-widest">Total Paid</span>
-                  <span>${(orderDetails.total / 100).toFixed(2)}</span>
+                  <span>{paymentMethod === 'upi' ? `₹${orderDetails.total_amount?.toFixed(2)}` : `$${(orderDetails.total / 100).toFixed(2)}`}</span>
                 </div>
-                
-                {orderDetails.metadata?.discountApplied && orderDetails.metadata.discountApplied !== 'none' && (
+
+                {paymentMethod === 'stripe' && orderDetails.metadata?.discountApplied && orderDetails.metadata.discountApplied !== 'none' && (
                   <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-sm">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium text-green-800">Discount Applied</span>
@@ -171,7 +206,7 @@ function SuccessContent() {
               </div>
 
               <div className="mt-12 flex flex-col sm:flex-row gap-4 items-center">
-                {orderDetails.receiptUrl && (
+                {paymentMethod === 'stripe' && orderDetails.receiptUrl && (
                   <a
                     href={`/receipt?session=${sessionId}`}
                     target="_blank"

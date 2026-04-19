@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import DiscountManagement from '@/components/DiscountManagement';
 import SaleManagement from '@/components/SaleManagement';
+import SupportManagement from '@/components/SupportManagement';
 import dynamic from 'next/dynamic';
 
 // Dynamically import ManageProducts to avoid SSR issues
@@ -16,7 +17,7 @@ export default function AdminDashboard() {
   const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'orders' | 'discounts' | 'sales' | 'products'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'discounts' | 'sales' | 'products' | 'support'>('orders');
   const [viewAll, setViewAll] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 9;
@@ -86,6 +87,8 @@ export default function AdminDashboard() {
         return <SaleManagement />;
       case 'products':
         return <ManageProducts />;
+      case 'support':
+        return <SupportManagement />;
       default:
         return (
           <div>
@@ -305,6 +308,16 @@ export default function AdminDashboard() {
           }`}
         >
           Products
+        </button>
+        <button
+          onClick={() => setActiveTab('support')}
+          className={`px-6 py-2 text-xs uppercase font-bold tracking-widest transition-colors rounded-sm ${
+            activeTab === 'support'
+              ? 'bg-white text-black shadow-sm'
+              : 'text-zinc-500 hover:text-black'
+          }`}
+        >
+          Support
         </button>
       </div>
 

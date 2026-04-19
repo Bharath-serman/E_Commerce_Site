@@ -66,7 +66,7 @@ export default function SignInPage() {
 
           <button
             onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center gap-3 border border-zinc-300 rounded-sm py-3 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors mb-6"
+            className="w-full flex items-center justify-center gap-3 border border-zinc-300 rounded-sm py-3 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-400 hover:shadow-md hover:scale-[1.02] transition-all duration-200 mb-6"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
