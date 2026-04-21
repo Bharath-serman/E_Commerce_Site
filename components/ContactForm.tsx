@@ -6,6 +6,7 @@ export default function ContactForm() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    countryCode: '+91',
     phone: '',
     subject: '',
     message: '',
@@ -14,20 +15,56 @@ export default function ContactForm() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+
+  const countryCodes = [
+    { code: '+1', country: 'US/CA', pattern: /^\d{10}$/, placeholder: '5551234567' },
+    { code: '+91', country: 'India', pattern: /^\d{10}$/, placeholder: '7200030913' },
+    { code: '+44', country: 'UK', pattern: /^\d{10,11}$/, placeholder: '7123456789' },
+    { code: '+61', country: 'Australia', pattern: /^\d{9,10}$/, placeholder: '412345678' },
+    { code: '+81', country: 'Japan', pattern: /^\d{10,11}$/, placeholder: '9012345678' },
+    { code: '+86', country: 'China', pattern: /^\d{11}$/, placeholder: '13812345678' },
+    { code: '+49', country: 'Germany', pattern: /^\d{10,11}$/, placeholder: '1512345678' },
+    { code: '+33', country: 'France', pattern: /^\d{9}$/, placeholder: '612345678' },
+    { code: '+39', country: 'Italy', pattern: /^\d{9,10}$/, placeholder: '3123456789' },
+    { code: '+34', country: 'Spain', pattern: /^\d{9}$/, placeholder: '612345678' },
+  ];
+
+  const validatePhone = (phone: string, countryCode: string) => {
+    if (!phone) return true; // Phone is optional
+    
+    const country = countryCodes.find(c => c.code === countryCode);
+    if (!country) return false;
+    
+    return country.pattern.test(phone.replace(/\s/g, ''));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setSuccess(false);
+    setPhoneError('');
+
+    // Validate phone number if provided
+    if (formData.phone && !validatePhone(formData.phone, formData.countryCode)) {
+      setPhoneError('Invalid phone number format for selected country');
+      setLoading(false);
+      return;
+    }
 
     try {
+      const submissionData = {
+        ...formData,
+        phone: formData.phone ? `${formData.countryCode} ${formData.phone}` : ''
+      };
+
       const response = await fetch('/api/support', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submissionData),
       });
 
       const data = await response.json();
@@ -37,6 +74,7 @@ export default function ContactForm() {
         setFormData({
           name: '',
           email: '',
+          countryCode: '+91',
           phone: '',
           subject: '',
           message: '',
@@ -120,14 +158,43 @@ export default function ContactForm() {
               <label htmlFor="phone" className="block text-sm font-medium text-zinc-700 mb-2">
                 Phone Number
               </label>
-              <input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full border border-zinc-300 rounded-sm px-4 py-3 text-sm focus:outline-none focus:border-black"
-                placeholder="+1 (555) 123-4567"
-              />
+              <div className="flex gap-2">
+                <select
+                  value={formData.countryCode}
+                  onChange={(e) => {
+                    setFormData({ ...formData, countryCode: e.target.value });
+                    setPhoneError('');
+                  }}
+                  className="border border-zinc-300 rounded-sm px-3 py-3 text-sm focus:outline-none focus:border-black bg-white"
+                >
+                  {countryCodes.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.code} ({country.country})
+                    </option>
+                  ))}
+                </select>
+                <input
+                  id="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ ...formData, phone: value });
+                    if (value && !validatePhone(value, formData.countryCode)) {
+                      setPhoneError('Invalid phone number format for selected country');
+                    } else {
+                      setPhoneError('');
+                    }
+                  }}
+                  className={`flex-1 border rounded-sm px-4 py-3 text-sm focus:outline-none ${
+                    phoneError ? 'border-red-300 focus:border-red-500' : 'border-zinc-300 focus:border-black'
+                  }`}
+                  placeholder={countryCodes.find(c => c.code === formData.countryCode)?.placeholder || '7200030913'}
+                />
+              </div>
+              {phoneError && (
+                <p className="mt-1 text-xs text-red-600">{phoneError}</p>
+              )}
             </div>
 
             <div>
