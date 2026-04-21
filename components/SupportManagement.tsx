@@ -6,6 +6,7 @@ export default function SupportManagement() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'in-progress' | 'resolved'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -46,15 +47,20 @@ export default function SupportManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this support request?')) return;
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedRequest) return;
     
     try {
-      const response = await fetch(`/api/support/${id}`, {
+      const response = await fetch(`/api/support/${selectedRequest.id}`, {
         method: 'DELETE',
       });
       if (response.ok) {
         fetchRequests();
         setSelectedRequest(null);
+        setShowDeleteConfirm(false);
       }
     } catch (error) {
       console.error('Error deleting request:', error);
@@ -236,7 +242,7 @@ export default function SupportManagement() {
                     className={`px-3 py-1 text-xs font-bold uppercase tracking-widest rounded-sm border ${
                       selectedRequest.status === 'pending'
                         ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                        : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                        : 'border-zinc-200 text-zinc-600 hover:border-black'
                     }`}
                   >
                     Pending
@@ -246,7 +252,7 @@ export default function SupportManagement() {
                     className={`px-3 py-1 text-xs font-bold uppercase tracking-widest rounded-sm border ${
                       selectedRequest.status === 'in-progress'
                         ? 'bg-blue-50 text-blue-700 border-blue-200'
-                        : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                        : 'border-zinc-200 text-zinc-600 hover:border-black'
                     }`}
                   >
                     In Progress
@@ -256,7 +262,7 @@ export default function SupportManagement() {
                     className={`px-3 py-1 text-xs font-bold uppercase tracking-widest rounded-sm border ${
                       selectedRequest.status === 'resolved'
                         ? 'bg-green-50 text-green-700 border-green-200'
-                        : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                        : 'border-zinc-200 text-zinc-600 hover:border-black'
                     }`}
                   >
                     Resolved
@@ -270,6 +276,36 @@ export default function SupportManagement() {
                   className="text-xs font-bold text-red-600 hover:text-red-800 uppercase tracking-widest"
                 >
                   Delete Request
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6 border-b border-zinc-200">
+              <h2 className="text-xl font-bold text-zinc-900">Delete Request</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-zinc-700 mb-6">
+                Are you sure you want to delete this support request? This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 text-xs font-bold uppercase tracking-widest border border-zinc-200 rounded-sm hover:border-black transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 text-xs font-bold uppercase tracking-widest bg-red-600 text-white rounded-sm hover:bg-red-700 transition-colors"
+                >
+                  Delete
                 </button>
               </div>
             </div>

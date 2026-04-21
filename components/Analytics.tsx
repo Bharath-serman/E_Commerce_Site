@@ -27,7 +27,9 @@ export default function Analytics() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`/api/analytics?range=${timeRange}`);
+      const res = await fetch(`/api/analytics?range=${timeRange}&t=${Date.now()}`, {
+        cache: 'no-store'
+      });
       const data = await res.json();
       console.log('Analytics API response:', data);
       if (data.success) {
