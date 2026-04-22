@@ -34,6 +34,8 @@ export interface Database {
           details: string[];
           category: string;
           sale_id?: string;
+          product_type: 'clothing' | 'electronics' | 'general';
+          in_stock: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -45,6 +47,8 @@ export interface Database {
           details?: string[];
           category?: string;
           sale_id?: string;
+          product_type?: 'clothing' | 'electronics' | 'general';
+          in_stock?: boolean;
         };
         Update: {
           name?: string;
@@ -54,6 +58,8 @@ export interface Database {
           details?: string[];
           category?: string;
           sale_id?: string;
+          product_type?: 'clothing' | 'electronics' | 'general';
+          in_stock?: boolean;
         };
       };
       sales: {
@@ -139,6 +145,29 @@ export interface Database {
           total_amount?: number;
           status?: string;
           items?: any[];
+        };
+      };
+      product_variants: {
+        Row: {
+          id: string;
+          product_id: string;
+          size: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL';
+          stock: number;
+          in_stock: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          product_id: string;
+          size: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL';
+          stock?: number;
+          in_stock?: boolean;
+        };
+        Update: {
+          product_id?: string;
+          size?: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL';
+          stock?: number;
+          in_stock?: boolean;
         };
       };
       support_requests: {

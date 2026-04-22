@@ -10,9 +10,10 @@ type ProductProps = {
   name: string;
   price: number;
   image: string;
+  selectedSize?: string;
 };
 
-export default function AddToCartButton({ product }: { product: ProductProps }) {
+export default function AddToCartButton({ product, disabled }: { product: ProductProps; disabled?: boolean }) {
   const { addToCart } = useCart();
   const [added, setAdded] = useState(false);
   const [session, setSession] = useState<any>(null);
@@ -44,7 +45,8 @@ export default function AddToCartButton({ product }: { product: ProductProps }) 
       name: product.name,
       price: product.price,
       image: product.image,
-      quantity: 1
+      quantity: 1,
+      selectedSize: product.selectedSize
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
@@ -65,9 +67,10 @@ export default function AddToCartButton({ product }: { product: ProductProps }) 
     <>
       <button
         onClick={handleAdd}
-        className={`w-full ${added ? 'bg-green-600 text-white' : 'bg-white border border-zinc-900 text-zinc-900 hover:bg-zinc-100'} px-8 py-4 rounded-sm transition-colors duration-300 text-xs tracking-[0.2em] uppercase font-bold`}
+        disabled={disabled || added}
+        className={`w-full ${added ? 'bg-green-600 text-white' : disabled ? 'bg-zinc-300 text-zinc-500 cursor-not-allowed' : 'bg-white border border-zinc-900 text-zinc-900 hover:bg-zinc-100'} px-8 py-4 rounded-sm transition-colors duration-300 text-xs tracking-[0.2em] uppercase font-bold`}
       >
-        {added ? 'Added to Cart ✓' : 'Add to Cart'}
+        {added ? 'Added to Cart ✓' : disabled ? 'Select Size' : 'Add to Cart'}
       </button>
       <AuthModal
         isOpen={showAuthModal}

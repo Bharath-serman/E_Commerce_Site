@@ -36,8 +36,21 @@ export default function ManageProducts() {
     description: '',
     image: '',
     details: '',
-    category: 'uncategorized'
+    category: 'uncategorized',
+    product_type: 'general' as 'clothing' | 'electronics' | 'general',
+    in_stock: true
   });
+
+  // Variant management for clothing
+  const [variants, setVariants] = useState<Array<{ size: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL', stock: number, in_stock: boolean }>>([
+    { size: 'XS', stock: 10, in_stock: true },
+    { size: 'S', stock: 10, in_stock: true },
+    { size: 'M', stock: 10, in_stock: true },
+    { size: 'L', stock: 10, in_stock: true },
+    { size: 'XL', stock: 10, in_stock: true },
+    { size: 'XXL', stock: 10, in_stock: true },
+    { size: 'XXXL', stock: 10, in_stock: true },
+  ]);
 
   // Hardcoded categories
   const CATEGORIES = [
@@ -159,7 +172,10 @@ export default function ManageProducts() {
         ...formData,
         image: imageUrl,
         price: parseFloat(formData.price),
-        details: formData.details.split(',').map(d => d.trim()).filter(d => d !== '')
+        details: formData.details.split(',').map(d => d.trim()).filter(d => d !== ''),
+        product_type: formData.product_type,
+        in_stock: formData.product_type === 'clothing' ? true : formData.in_stock,
+        variants: formData.product_type === 'clothing' ? variants : undefined
       };
 
       const res = await fetch('/api/products', {
@@ -170,13 +186,23 @@ export default function ManageProducts() {
 
       const data = await res.json();
       if (data.success) {
+
         setStatus({
           isOpen: true,
           type: 'success',
           title: 'Registration Successful',
           message: `${formData.name} has been added to your storefront inventory.`
         });
-        setFormData({ name: '', price: '', description: '', image: '', details: '', category: 'uncategorized' });
+        setFormData({ name: '', price: '', description: '', image: '', details: '', category: 'uncategorized', product_type: 'general', in_stock: true });
+        setVariants([
+          { size: 'XS', stock: 10, in_stock: true },
+          { size: 'S', stock: 10, in_stock: true },
+          { size: 'M', stock: 10, in_stock: true },
+          { size: 'L', stock: 10, in_stock: true },
+          { size: 'XL', stock: 10, in_stock: true },
+          { size: 'XXL', stock: 10, in_stock: true },
+          { size: 'XXXL', stock: 10, in_stock: true },
+        ]);
         setSelectedFile(null);
         setPreviewUrl('');
         fetchProducts(); // Refresh list
@@ -203,6 +229,40 @@ export default function ManageProducts() {
   const handleDelete = (id: string) => {
     setProductToDelete(id);
     setIsDeleteModalOpen(true);
+  };
+
+  const toggleStock = async (id: string, currentStock: boolean) => {
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ in_stock: !currentStock })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProducts(products.map(p => p._id === id ? { ...p, in_stock: !currentStock } : p));
+        setStatus({
+          isOpen: true,
+          type: 'success',
+          title: 'Stock Updated',
+          message: `Product is now ${!currentStock ? 'in stock' : 'out of stock'}.`
+        });
+      } else {
+        setStatus({
+          isOpen: true,
+          type: 'error',
+          title: 'Update Failed',
+          message: data.error || 'An unexpected error occurred.'
+        });
+      }
+    } catch (err) {
+      setStatus({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: 'Could not update stock status.'
+      });
+    }
   };
 
   const confirmDelete = async () => {
@@ -297,6 +357,31 @@ export default function ManageProducts() {
               </select>
             </div>
             <div>
+              <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Product Type</label>
+              <select
+                value={formData.product_type}
+                onChange={(e) => setFormData({ ...formData, product_type: e.target.value as 'clothing' | 'electronics' | 'general' })}
+                className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
+              >
+                <option value="general">General</option>
+                <option value="clothing">Clothing (Has Sizes)</option>
+                <option value="electronics">Electronics</option>
+              </select>
+            </div>
+            {formData.product_type !== 'clothing' && (
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">In Stock</label>
+                <select
+                  value={formData.in_stock.toString()}
+                  onChange={(e) => setFormData({ ...formData, in_stock: e.target.value === 'true' })}
+                  className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
+                >
+                  <option value="true">In Stock</option>
+                  <option value="false">Out of Stock</option>
+                </select>
+              </div>
+            )}
+            <div>
               <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Product Image</label>
               
               {/* File Upload Section */}
@@ -360,6 +445,39 @@ export default function ManageProducts() {
             </div>
           </div>
           <div className="space-y-6">
+            {formData.product_type === 'clothing' && (
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-4">Size & Stock Management</label>
+                <div className="border border-zinc-200 rounded-sm p-4 space-y-3">
+                  {variants.map((variant, index) => (
+                    <div key={variant.size} className="flex items-center gap-4">
+                      <span className="w-12 text-sm font-medium text-zinc-900">{variant.size}</span>
+                      <div className="flex-1">
+                        <input
+                          type="number"
+                          min="0"
+                          value={variant.stock}
+                          onChange={(e) => {
+                            const newVariants = [...variants];
+                            newVariants[index] = { 
+                              ...variant, 
+                              stock: parseInt(e.target.value) || 0,
+                              in_stock: (parseInt(e.target.value) || 0) > 0
+                            };
+                            setVariants(newVariants);
+                          }}
+                          className="w-full border border-zinc-200 p-2 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
+                          placeholder="Stock"
+                        />
+                      </div>
+                      <span className="text-xs text-zinc-500">
+                        {variant.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Description</label>
               <textarea
@@ -404,17 +522,18 @@ export default function ManageProducts() {
                 <th className="px-6 py-4 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Preview</th>
                 <th className="px-6 py-4 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Product Information</th>
                 <th className="px-6 py-4 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Price</th>
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Stock</th>
                 <th className="px-6 py-4 text-right text-[10px] font-bold text-zinc-400 uppercase tracking-widest pr-10">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-zinc-200">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-20 text-center text-zinc-300 text-xs tracking-widest uppercase animate-pulse">Syncing Inventory...</td>
+                  <td colSpan={5} className="px-6 py-20 text-center text-zinc-300 text-xs tracking-widest uppercase animate-pulse">Syncing Inventory...</td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-20 text-center text-zinc-400 text-xs tracking-widest uppercase">No items in your shop.</td>
+                  <td colSpan={5} className="px-6 py-20 text-center text-zinc-400 text-xs tracking-widest uppercase">No items in your shop.</td>
                 </tr>
               ) : products.map((product) => (
                 <tr key={product._id} className="hover:bg-zinc-50 transition-colors">
@@ -430,7 +549,20 @@ export default function ManageProducts() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-zinc-900">
                     ${product.price.toFixed(2)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right pr-10">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-sm ${
+                      product.in_stock !== false ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                    }`}>
+                      {product.in_stock !== false ? 'In Stock' : 'Out of Stock'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right pr-10 space-x-2">
+                    <button
+                      onClick={() => toggleStock(product._id, product.in_stock !== false)}
+                      className="text-[10px] font-bold uppercase tracking-widest text-zinc-900 hover:text-zinc-700 transition-colors bg-zinc-50 px-3 py-2 rounded-sm border border-zinc-200"
+                    >
+                      {product.in_stock !== false ? 'Out of Stock' : 'In Stock'}
+                    </button>
                     <button
                       onClick={() => handleDelete(product._id)}
                       className="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors bg-red-50 px-3 py-2 rounded-sm border border-red-100"

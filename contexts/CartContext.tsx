@@ -9,6 +9,7 @@ export type CartItem = {
   price: number;
   image: string;
   quantity: number;
+  selectedSize?: string;
 };
 
 export type DiscountedCartItem = {
@@ -137,9 +138,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addToCart = useCallback((newItem: CartItem) => {
     setItems(prev => {
-      const existing = prev.find(i => i.id === newItem.id);
+      // Find existing item with same id AND same size (if size is specified)
+      const existing = prev.find(i => 
+        i.id === newItem.id && 
+        (i.selectedSize === newItem.selectedSize || (!i.selectedSize && !newItem.selectedSize))
+      );
       if (existing) {
-        return prev.map(i => i.id === newItem.id ? { ...i, quantity: i.quantity + newItem.quantity } : i);
+        return prev.map(i => 
+          i.id === newItem.id && i.selectedSize === newItem.selectedSize 
+            ? { ...i, quantity: i.quantity + newItem.quantity } 
+            : i
+        );
       }
       return [...prev, newItem];
     });

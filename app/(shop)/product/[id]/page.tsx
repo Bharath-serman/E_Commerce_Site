@@ -1,113 +1,128 @@
+'use client';
+
+import { useState, useEffect, use } from 'react';
 import CheckoutButton from '@/components/CheckoutButton';
 import AddToCartButton from '@/components/AddToCartButton';
-import { notFound } from 'next/navigation';
 import DiscountBadge from '@/components/DiscountBadge';
+import { ProductVariant } from '@/lib/supabaseModels';
 
-// Supabase product fetch
-const getProduct = async (id: string) => {
-  try {
-    // Use Supabase ProductService
-    const { ProductService } = await import('@/lib/supabaseModels');
-    const product = await ProductService.getById(id);
-    if (product) {
-        return {
-          _id: product.id,
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          description: product.description,
-          image: product.image,
-          details: product.details || ['Premium Quality', 'Authentic Design'],
-          category: product.category || 'uncategorized',
-          sale_id: product.sale_id
-        };
-    }
-  } catch (error) {
-    console.error("Supabase fetch failed:", error);
-  }
+interface Product {
+  _id: string;
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  image: string;
+  details: string[];
+  category: string;
+  sale_id?: string;
+  product_type?: 'clothing' | 'electronics' | 'general';
+  in_stock?: boolean;
+}
 
-  return null;
-};
+export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [discountedPrice, setDiscountedPrice] = useState<number | null>(null);
 
-export default async function ProductPage({ params }: { params: { id: string } }) {
-  const resolvedParams = await params;
-  const product = await getProduct(resolvedParams.id);
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const { ProductService, ProductVariantService } = await import('@/lib/supabaseModels');
+        const productData = await ProductService.getById(id);
+        
+        if (productData) {
+          const formattedProduct: Product = {
+            _id: productData.id,
+            id: productData.id,
+            name: productData.name,
+            price: productData.price,
+            description: productData.description,
+            image: productData.image,
+            details: productData.details || ['Premium Quality', 'Authentic Design'],
+            category: productData.category || 'uncategorized',
+            sale_id: productData.sale_id,
+            product_type: productData.product_type || 'general',
+            in_stock: productData.in_stock !== undefined ? productData.in_stock : true
+          };
+          setProduct(formattedProduct);
 
-  if (!product) {
-    return notFound();
-  }
+          // Fetch variants if it's a clothing item
+          if (formattedProduct.product_type === 'clothing') {
+            const variantData = await ProductVariantService.getByProductId(productData.id);
+            setVariants(variantData);
+            // Auto-select first available size from variants
+            const firstAvailable = variantData.find(v => v.in_stock);
+            if (firstAvailable) {
+              setSelectedSize(firstAvailable.size);
+            } else {
+              // If no variants or none in stock, select 'M' as default
+              setSelectedSize('M');
+            }
+          }
 
-  // Fetch active sales and discounts to calculate discounted price
-  let discountedPrice = null;
-  let applicableSale = null;
-  let applicableDiscount = null;
-  
-  try {
-    console.log('ProductPage fetching discounts for:', { productId: product.id, productName: product.name, category: product.category });
-    
-    // Test discount API directly
-    console.log('Testing discount API...');
-    const baseUrl = process.env.NODE_ENV === 'production' ? 'https://your-domain.com' : 'http://localhost:3000';
-    const discountResponse = await fetch(`${baseUrl}/api/discounts`);
-    const discountData = await discountResponse.json();
-    console.log('Discount API response:', discountData);
-    
-    // Check sales
-    const { SupabaseSaleDiscountService } = await import('@/lib/supabaseSaleDiscountService');
-    const activeSales = await SupabaseSaleDiscountService.getActiveSales();
-    console.log('ProductPage active sales:', activeSales);
-    
-    // Convert product to format expected by service
-    const productForService = {
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      description: product.description,
-      image: product.image,
-      details: product.details,
-      category: product.category,
-      sale_id: product.sale_id,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+          // Fetch discounts
+          try {
+            const { SupabaseSaleDiscountService } = await import('@/lib/supabaseSaleDiscountService');
+            const activeSales = await SupabaseSaleDiscountService.getActiveSales();
+            const productForService = {
+              id: productData.id,
+              name: productData.name,
+              price: productData.price,
+              description: productData.description,
+              image: productData.image,
+              details: productData.details,
+              category: productData.category,
+              sale_id: productData.sale_id,
+              product_type: productData.product_type || 'general',
+              in_stock: productData.in_stock !== undefined ? productData.in_stock : true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            const applicableSale = SupabaseSaleDiscountService.findBestSaleForProduct(productForService, activeSales);
+            if (applicableSale) {
+              const salePrice = SupabaseSaleDiscountService.calculateDiscountedPrice(productData.price, applicableSale);
+              setDiscountedPrice(salePrice);
+            }
+          } catch (discountError) {
+            console.error('Error fetching discounts:', discountError);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching product:", error);
+      } finally {
+        setLoading(false);
+      }
     };
-    
-    applicableSale = SupabaseSaleDiscountService.findBestSaleForProduct(productForService, activeSales);
-    console.log('ProductPage found applicable sale:', applicableSale);
-    
-    // Check discounts
-    const { DiscountService } = await import('@/lib/discountService');
-    const activeDiscounts = await DiscountService.getActiveDiscounts();
-    console.log('ProductPage active discounts:', activeDiscounts);
-    
-    applicableDiscount = activeDiscounts.find(discount => 
-      DiscountService.getApplicableDiscount(discount, product.id, product.price)
-    );
-    console.log('ProductPage found applicable discount:', applicableDiscount);
-    
-    // Calculate best price (sale vs discount)
-    let salePrice = product.price;
-    let discountPrice = product.price;
-    
-    if (applicableSale) {
-      salePrice = SupabaseSaleDiscountService.calculateDiscountedPrice(product.price, applicableSale);
-      console.log('ProductPage calculated sale price:', { original: product.price, sale: salePrice });
-    }
-    
-    if (applicableDiscount) {
-      discountPrice = DiscountService.calculateDiscountedPrice(product.price, applicableDiscount);
-      console.log('ProductPage calculated discount price:', { original: product.price, discount: discountPrice });
-    }
-    
-    // Use the better price
-    const bestPrice = Math.min(salePrice, discountPrice);
-    if (bestPrice < product.price) {
-      discountedPrice = bestPrice;
-      console.log('ProductPage final discounted price:', { original: product.price, final: discountedPrice });
-    }
-    
-  } catch (error) {
-    console.error('Error fetching discounts for product:', error);
+
+    fetchProduct();
+  }, [id]);
+
+  if (loading || !product) {
+    return <div className="flex items-center justify-center min-h-[calc(100vh-16rem)]">Loading...</div>;
   }
+
+  const isClothing = product.product_type === 'clothing';
+  const selectedVariant = variants.find(v => v.size === selectedSize);
+  
+  // Default sizes for clothing products without variants
+  const defaultSizes = ['S', 'M', 'L', 'XL', '2XL', '3XL'];
+  const availableSizes = variants.length > 0 ? variants : defaultSizes.map(size => ({ 
+    id: `${product.id}-${size}`,
+    product_id: product.id,
+    size: size as 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL',
+    stock: 10,
+    in_stock: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }));
+  
+  const isOutOfStock = isClothing 
+    ? (selectedVariant ? !selectedVariant.in_stock : !availableSizes.some(v => v.in_stock))
+    : !product.in_stock;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-16 lg:px-8 lg:grid lg:grid-cols-2 lg:gap-x-16 min-h-[calc(100vh-16rem)] flex-grow w-full">
@@ -140,6 +155,9 @@ export default async function ProductPage({ params }: { params: { id: string } }
             ) : (
               <p className="text-2xl font-light text-zinc-900">${product.price.toFixed(2)}</p>
             )}
+            {isOutOfStock && (
+              <span className="text-sm font-medium text-red-600 uppercase tracking-widest">Out of Stock</span>
+            )}
           </div>
         </div>
         
@@ -159,10 +177,60 @@ export default async function ProductPage({ params }: { params: { id: string } }
             ))}
           </ul>
         </div>
+
+        {/* Size Selection for Clothing */}
+        {isClothing && (
+          <div className="mt-8 border-t border-zinc-200 pt-8">
+            <h3 className="text-sm font-semibold text-zinc-900 uppercase tracking-widest mb-2">Size</h3>
+            {selectedSize && (
+              <p className="text-sm text-zinc-600 mb-4">Size: {selectedSize}</p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {availableSizes.map((item) => {
+                const size = typeof item === 'string' ? item : item.size;
+                const inStock = typeof item === 'string' ? true : item.in_stock;
+                return (
+                  <button
+                    key={size}
+                    onClick={() => inStock && setSelectedSize(size)}
+                    disabled={!inStock}
+                    className={`w-12 h-12 border rounded-md text-sm font-medium transition-all ${
+                      selectedSize === size
+                        ? 'border-blue-500 bg-blue-50 text-blue-900'
+                        : inStock
+                        ? 'border-zinc-300 bg-white text-zinc-900 hover:border-blue-500 hover:bg-blue-50'
+                        : 'border-zinc-200 bg-zinc-50 text-zinc-400 cursor-not-allowed'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         
         <div className="mt-12 flex flex-col space-y-4">
-          <AddToCartButton product={{ id: product._id, name: product.name, price: product.price, image: product.image }} />
-          <CheckoutButton product={{ id: product._id, name: product.name, price: product.price, image: product.image }} />
+          <AddToCartButton
+            product={{
+              id: product._id,
+              name: product.name,
+              price: discountedPrice || product.price,
+              image: product.image,
+              selectedSize: isClothing ? (selectedSize || undefined) : undefined
+            }} 
+            disabled={isOutOfStock || (isClothing && !selectedSize)}
+          />
+          <CheckoutButton
+            product={{
+              id: product._id,
+              name: product.name,
+              price: discountedPrice || product.price,
+              image: product.image,
+              selectedSize: isClothing ? (selectedSize || undefined) : undefined
+            }} 
+            disabled={isOutOfStock || (isClothing && !selectedSize)}
+          />
         </div>
       </div>
     </div>
