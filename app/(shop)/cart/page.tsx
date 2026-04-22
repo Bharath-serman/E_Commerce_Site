@@ -82,6 +82,9 @@ export default function CartPage() {
                     <div className="flex justify-between">
                       <div>
                         <h3 className="text-base text-zinc-900 font-medium">{item.name}</h3>
+                        {item.selectedSize && (
+                          <p className="mt-1 text-xs text-zinc-500 uppercase tracking-widest">Size: {item.selectedSize}</p>
+                        )}
                         <div className="flex items-center gap-2">
                           {discountedItem && discountedItem.discount && discountedItem.discountedPrice < item.price ? (
                             <>

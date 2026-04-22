@@ -12,12 +12,14 @@ interface CheckoutButtonProps {
     name: string;
     price: number;
     image: string;
+    selectedSize?: string;
   };
   isCart?: boolean; // If true, uses all items in cart
   discountCode?: string; // Optional discount code
+  disabled?: boolean;
 }
 
-export default function CheckoutButton({ productId, product, isCart = false, discountCode }: CheckoutButtonProps) {
+export default function CheckoutButton({ productId, product, isCart = false, discountCode, disabled }: CheckoutButtonProps) {
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -97,10 +99,10 @@ export default function CheckoutButton({ productId, product, isCart = false, dis
     <>
       <button
         onClick={handleCheckout}
-        disabled={loading || (isCart && items.length === 0)}
+        disabled={disabled || loading || (isCart && items.length === 0)}
         className="w-full bg-black text-white px-8 py-4 text-xs tracking-[0.2em] uppercase font-bold rounded-sm hover:bg-zinc-800 transition-all disabled:bg-zinc-300 disabled:cursor-not-allowed shadow-lg"
       >
-        {loading ? "Redirecting..." : buttonText}
+        {loading ? "Redirecting..." : disabled ? "Select Size" : buttonText}
       </button>
       <AuthModal
         isOpen={showAuthModal}

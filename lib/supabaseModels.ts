@@ -17,6 +17,10 @@ export type SupportRequest = Database['public']['Tables']['support_requests']['R
 export type SupportRequestInsert = Database['public']['Tables']['support_requests']['Insert'];
 export type SupportRequestUpdate = Database['public']['Tables']['support_requests']['Update'];
 
+export type ProductVariant = Database['public']['Tables']['product_variants']['Row'];
+export type ProductVariantInsert = Database['public']['Tables']['product_variants']['Insert'];
+export type ProductVariantUpdate = Database['public']['Tables']['product_variants']['Update'];
+
 // Product service
 export class ProductService {
   static async getAll(): Promise<Product[]> {
@@ -292,5 +296,78 @@ export class SupportService {
       .eq('id', id);
 
     if (error) throw error;
+  }
+}
+
+// Product variant service
+export class ProductVariantService {
+  static async getByProductId(productId: string): Promise<ProductVariant[]> {
+    const { data, error } = await supabase
+      .from('product_variants')
+      .select('*')
+      .eq('product_id', productId)
+      .order('size', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async getById(id: string): Promise<ProductVariant | null> {
+    const { data, error } = await supabase
+      .from('product_variants')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async create(variant: ProductVariantInsert): Promise<ProductVariant> {
+    const { data, error } = await supabase
+      .from('product_variants')
+      .insert(variant)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async update(id: string, updates: ProductVariantUpdate): Promise<ProductVariant> {
+    const { data, error } = await supabase
+      .from('product_variants')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('product_variants')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  }
+
+  static async deleteByProductId(productId: string): Promise<void> {
+    const { error } = await supabase
+      .from('product_variants')
+      .delete()
+      .eq('product_id', productId);
+
+    if (error) throw error;
+  }
+
+  static async updateStock(id: string, stock: number): Promise<ProductVariant> {
+    return this.update(id, { 
+      stock, 
+      in_stock: stock > 0 
+    });
   }
 }
