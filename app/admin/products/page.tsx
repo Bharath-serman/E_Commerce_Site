@@ -14,6 +14,8 @@ export default function ManageProducts() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<any>(null);
 
   const [status, setStatus] = useState<{ isOpen: boolean, type: 'success' | 'error', title: string, message: string }>({
     isOpen: false,
@@ -40,6 +42,19 @@ export default function ManageProducts() {
     product_type: 'general' as 'clothing' | 'electronics' | 'general',
     in_stock: true
   });
+
+  // Edit Form State
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    price: '',
+    description: '',
+    image: '',
+    details: '',
+    category: 'uncategorized',
+    product_type: 'general' as 'clothing' | 'electronics' | 'general',
+    in_stock: true
+  });
+  const [editVariants, setEditVariants] = useState<Array<{ size: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL', stock: number, in_stock: boolean }>>([]);
 
   // Variant management for clothing
   const [variants, setVariants] = useState<Array<{ size: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL', stock: number, in_stock: boolean }>>([
@@ -231,6 +246,96 @@ export default function ManageProducts() {
     setIsDeleteModalOpen(true);
   };
 
+  const handleEdit = async (product: any) => {
+    try {
+      // Fetch variants if it's a clothing item
+      let variants = [];
+      if (product.product_type === 'clothing') {
+        const res = await fetch(`/api/variants/${product._id}`);
+        const data = await res.json();
+        if (data.success) {
+          variants = data.data;
+        }
+      }
+      
+      const productVariants = variants.length > 0 ? variants : [
+        { size: 'XS', stock: 10, in_stock: true },
+        { size: 'S', stock: 10, in_stock: true },
+        { size: 'M', stock: 10, in_stock: true },
+        { size: 'L', stock: 10, in_stock: true },
+        { size: 'XL', stock: 10, in_stock: true },
+        { size: 'XXL', stock: 10, in_stock: true },
+        { size: 'XXXL', stock: 10, in_stock: true },
+      ];
+      
+      setEditFormData({
+        name: product.name,
+        price: product.price.toString(),
+        description: product.description,
+        image: product.image,
+        details: product.details?.join(', ') || '',
+        category: product.category || 'uncategorized',
+        product_type: product.product_type || 'general',
+        in_stock: product.in_stock !== false
+      });
+      setEditVariants(productVariants);
+      setProductToEdit(product);
+      setIsEditModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching product for edit:', error);
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    try {
+      const productData = {
+        ...editFormData,
+        price: parseFloat(editFormData.price),
+        details: editFormData.details.split(',').map(d => d.trim()).filter(d => d !== ''),
+        product_type: editFormData.product_type,
+        in_stock: editFormData.product_type === 'clothing' ? true : editFormData.in_stock,
+        variants: editFormData.product_type === 'clothing' ? editVariants : undefined
+      };
+
+      const res = await fetch(`/api/products/${productToEdit._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setStatus({
+          isOpen: true,
+          type: 'success',
+          title: 'Update Successful',
+          message: `${editFormData.name} has been updated.`
+        });
+        setIsEditModalOpen(false);
+        fetchProducts();
+      } else {
+        setStatus({
+          isOpen: true,
+          type: 'error',
+          title: 'Update Failed',
+          message: data.error || 'Check your network connection and try again.'
+        });
+      }
+    } catch (err) {
+      setStatus({
+        isOpen: true,
+        type: 'error',
+        title: 'Network Error',
+        message: 'Could not update the product.'
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const toggleStock = async (id: string, currentStock: boolean) => {
     try {
       const res = await fetch(`/api/products/${id}`, {
@@ -240,12 +345,13 @@ export default function ManageProducts() {
       });
       const data = await res.json();
       if (data.success) {
+        const product = products.find(p => p._id === id);
         setProducts(products.map(p => p._id === id ? { ...p, in_stock: !currentStock } : p));
         setStatus({
           isOpen: true,
           type: 'success',
           title: 'Stock Updated',
-          message: `Product is now ${!currentStock ? 'in stock' : 'out of stock'}.`
+          message: `${product?.name || 'Product'} is now ${!currentStock ? 'in stock' : 'out of stock'}.`
         });
       } else {
         setStatus({
@@ -558,6 +664,12 @@ export default function ManageProducts() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right pr-10 space-x-2">
                     <button
+                      onClick={() => handleEdit(product)}
+                      className="text-[10px] font-bold uppercase tracking-widest text-blue-600 hover:text-blue-800 transition-colors bg-blue-50 px-3 py-2 rounded-sm border border-blue-100"
+                    >
+                      Edit
+                    </button>
+                    <button
                       onClick={() => toggleStock(product._id, product.in_stock !== false)}
                       className="text-[10px] font-bold uppercase tracking-widest text-zinc-900 hover:text-zinc-700 transition-colors bg-zinc-50 px-3 py-2 rounded-sm border border-zinc-200"
                     >
@@ -596,6 +708,167 @@ export default function ManageProducts() {
         title={status.title}
         message={status.message}
       />
+
+      {/* Edit Product Modal */}
+      {isEditModalOpen && productToEdit && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-sm max-w-4xl w-full max-h-[90vh] overflow-y-auto p-8">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-lg font-bold text-zinc-900 uppercase tracking-widest">Edit Product</h2>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-zinc-400 hover:text-zinc-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Product Name</label>
+                  <input
+                    required
+                    type="text"
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Price (USD)</label>
+                  <input
+                    required
+                    type="number"
+                    step="0.01"
+                    value={editFormData.price}
+                    onChange={(e) => setEditFormData({ ...editFormData, price: e.target.value })}
+                    className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Category</label>
+                  <select
+                    value={editFormData.category}
+                    onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                    className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
+                  >
+                    {CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat} className="capitalize">
+                        {cat === 'uncategorized' ? 'Select Category' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Product Type</label>
+                  <select
+                    value={editFormData.product_type}
+                    onChange={(e) => setEditFormData({ ...editFormData, product_type: e.target.value as 'clothing' | 'electronics' | 'general' })}
+                    className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
+                  >
+                    <option value="general">General</option>
+                    <option value="clothing">Clothing (Has Sizes)</option>
+                    <option value="electronics">Electronics</option>
+                  </select>
+                </div>
+                {editFormData.product_type !== 'clothing' && (
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">In Stock</label>
+                    <select
+                      value={editFormData.in_stock.toString()}
+                      onChange={(e) => setEditFormData({ ...editFormData, in_stock: e.target.value === 'true' })}
+                      className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
+                    >
+                      <option value="true">In Stock</option>
+                      <option value="false">Out of Stock</option>
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Product Image</label>
+                  <input
+                    type="text"
+                    value={editFormData.image}
+                    onChange={(e) => setEditFormData({ ...editFormData, image: e.target.value })}
+                    className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
+                  />
+                  {editFormData.image && (
+                    <img src={editFormData.image} alt="Preview" className="w-full h-48 object-cover rounded-sm border border-zinc-200 mt-2" />
+                  )}
+                </div>
+              </div>
+              <div className="space-y-6">
+                {editFormData.product_type === 'clothing' && (
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-4">Size & Stock Management</label>
+                    <div className="border border-zinc-200 rounded-sm p-4 space-y-3">
+                      {editVariants.map((variant, index) => (
+                        <div key={variant.size} className="flex items-center gap-4">
+                          <span className="w-12 text-sm font-medium text-zinc-900">{variant.size}</span>
+                          <div className="flex-1">
+                            <input
+                              type="number"
+                              min="0"
+                              value={variant.stock}
+                              onChange={(e) => {
+                                const newVariants = [...editVariants];
+                                newVariants[index] = { 
+                                  ...variant, 
+                                  stock: parseInt(e.target.value) || 0,
+                                  in_stock: (parseInt(e.target.value) || 0) > 0
+                                };
+                                setEditVariants(newVariants);
+                              }}
+                              className="w-full border border-zinc-200 p-2 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
+                            />
+                          </div>
+                          <span className="text-xs text-zinc-500">
+                            {variant.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Description</label>
+                  <textarea
+                    required
+                    value={editFormData.description}
+                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                    className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50 h-32 resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Product Details (Comma Separated)</label>
+                  <input
+                    type="text"
+                    value={editFormData.details}
+                    onChange={(e) => setEditFormData({ ...editFormData, details: e.target.value })}
+                    className="w-full border border-zinc-200 p-3 text-sm focus:border-black outline-none transition-all rounded-sm bg-zinc-50"
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="flex-1 bg-zinc-200 text-zinc-700 py-4 text-xs font-bold uppercase tracking-[0.2em] rounded-sm hover:bg-zinc-300 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={submitting}
+                    type="submit"
+                    className="flex-1 bg-black text-white py-4 text-xs font-bold uppercase tracking-[0.2em] rounded-sm hover:bg-zinc-800 transition-all shadow-lg disabled:bg-zinc-300"
+                  >
+                    {submitting ? "Updating..." : "Update Product"}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

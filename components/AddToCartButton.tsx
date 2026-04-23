@@ -70,7 +70,7 @@ export default function AddToCartButton({ product, disabled }: { product: Produc
         disabled={disabled || added}
         className={`w-full ${added ? 'bg-green-600 text-white' : disabled ? 'bg-zinc-300 text-zinc-500 cursor-not-allowed' : 'bg-white border border-zinc-900 text-zinc-900 hover:bg-zinc-100'} px-8 py-4 rounded-sm transition-colors duration-300 text-xs tracking-[0.2em] uppercase font-bold`}
       >
-        {added ? 'Added to Cart ✓' : disabled ? 'Select Size' : 'Add to Cart'}
+        {added ? 'Added to Cart ✓' : disabled ? 'Add to Cart' : 'Add to Cart'}
       </button>
       <AuthModal
         isOpen={showAuthModal}

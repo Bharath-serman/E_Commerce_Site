@@ -27,15 +27,9 @@ export async function GET(request: NextRequest) {
         break;
     }
 
-    // First, check if table exists and has any data
-    const { count: totalCount, error: countError } = await supabase
-      .from('page_views')
-      .select('*', { count: 'exact', head: true });
-
-    console.log('Total records in page_views table:', totalCount);
-    if (countError) {
-      console.error('Error counting page_views:', countError);
-    }
+    // Reset times to UTC midnight to avoid timezone issues
+    endDate.setUTCHours(23, 59, 59, 999);
+    startDate.setUTCHours(0, 0, 0, 0);
 
     // Fetch analytics data from page_views table
     const { data: pageViews, error } = await supabase
@@ -44,17 +38,6 @@ export async function GET(request: NextRequest) {
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString())
       .order('created_at', { ascending: true });
-
-    console.log('Page views query result:', { 
-      count: pageViews?.length || 0, 
-      error: error?.message,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
-    });
-    
-    if (pageViews && pageViews.length > 0) {
-      console.log('Sample page view:', pageViews[0]);
-    }
 
     if (error) throw error;
 

@@ -9,6 +9,8 @@ function SuccessContent() {
   const { clearCart } = useCart();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
+  const orderId = searchParams.get('order_id');
+  const paymentId = searchParams.get('payment_id');
 
   const [mounted, setMounted] = useState(false);
   const [orderDetails, setOrderDetails] = useState<any>(null);
@@ -35,7 +37,7 @@ function SuccessContent() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `receipt-${sessionId?.slice(0, 8)}.pdf`;
+      a.download = `receipt-${orderId?.slice(0, 8) || sessionId?.slice(0, 8)}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -56,8 +58,36 @@ function SuccessContent() {
     // Clear cart context on successful arrival
     clearCart();
 
-    // Fetch securely generated Stripe session details if ID exists
-    if (sessionId) {
+    // Handle Razorpay payment
+    if (orderId && paymentId) {
+      setLoading(true);
+      // Order should already be created by webhook, just fetch it
+      fetch(`/api/orders/by-razorpay/${orderId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setOrderDetails({
+              ...data.data,
+              transactionId: paymentId,
+              total: data.data.total_amount * 100, // Convert to cents for display
+              lineItems: data.data.items.map((item: any) => ({
+                description: item.name,
+                quantity: item.quantity,
+                amount_total: item.price * 100
+              })),
+              metadata: {
+                discountApplied: data.data.discount_applied,
+                discountAmount: data.data.discount_amount * 100,
+                originalTotal: data.data.original_total * 100
+              }
+            });
+          }
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    }
+    // Handle Stripe session (legacy)
+    else if (sessionId) {
       setLoading(true);
       fetch(`/api/checkout/${sessionId}`)
         .then(res => res.json())
@@ -83,7 +113,7 @@ function SuccessContent() {
         .catch(console.error)
         .finally(() => setLoading(false));
     }
-  }, [sessionId, clearCart]);
+  }, [sessionId, orderId, paymentId, clearCart]);
 
   if (!mounted) return null;
 
@@ -171,19 +201,9 @@ function SuccessContent() {
               </div>
 
               <div className="mt-12 flex flex-col sm:flex-row gap-4 items-center">
-                {orderDetails.receiptUrl && (
-                  <a
-                    href={`/receipt?session=${sessionId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full sm:w-auto bg-black text-white px-8 py-4 text-xs tracking-[0.2em] uppercase font-bold rounded-sm shadow-lg hover:bg-zinc-800 transition-all text-center"
-                  >
-                    View Receipt
-                  </a>
-                )}
                 <Link
                   href="/"
-                  className="w-full sm:w-auto border border-zinc-200 text-black px-8 py-4 text-xs tracking-[0.2em] uppercase font-bold rounded-sm hover:bg-zinc-50 transition-all text-center"
+                  className="w-full sm:w-auto bg-black text-white px-8 py-4 text-xs tracking-[0.2em] uppercase font-bold rounded-sm shadow-lg hover:bg-zinc-800 transition-all text-center"
                 >
                   Return to Home
                 </Link>

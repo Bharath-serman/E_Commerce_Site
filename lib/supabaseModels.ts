@@ -241,6 +241,23 @@ export class OrderService {
     
     return data;
   }
+
+  static async getByRazorpayOrderId(orderId: string): Promise<Order | null> {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('razorpay_order_id', orderId)
+      .maybeSingle();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      throw error;
+    }
+    
+    return data;
+  }
 }
 
 // Support request service
