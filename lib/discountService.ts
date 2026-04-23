@@ -15,7 +15,7 @@ interface Discount {
 
 export class DiscountService {
   static getActiveDiscounts(): Promise<Discount[]> {
-    const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
+    const baseUrl = typeof window !== 'undefined' ? '' : process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     return fetch(`${baseUrl}/api/discounts`)
       .then(res => res.json())
       .then(data => {
