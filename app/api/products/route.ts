@@ -45,7 +45,9 @@ export async function GET() {
       description: product.description,
       image: product.image,
       details: product.details,
-      category: product.category || 'uncategorized'
+      category: product.category || 'uncategorized',
+      product_type: product.product_type || 'general',
+      in_stock: product.in_stock !== false
     }));
     
     return NextResponse.json({ success: true, data: formattedProducts });

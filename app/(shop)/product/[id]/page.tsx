@@ -4,7 +4,6 @@ import { useState, useEffect, use } from 'react';
 import CheckoutButton from '@/components/CheckoutButton';
 import AddToCartButton from '@/components/AddToCartButton';
 import DiscountBadge from '@/components/DiscountBadge';
-import { ProductVariant } from '@/lib/supabaseModels';
 
 interface Product {
   _id: string;
@@ -20,6 +19,16 @@ interface Product {
   in_stock?: boolean;
 }
 
+interface ProductVariant {
+  id: string;
+  product_id: string;
+  size: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL';
+  stock: number;
+  in_stock: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [product, setProduct] = useState<Product | null>(null);
@@ -31,7 +40,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const { ProductService, ProductVariantService } = await import('@/lib/supabaseModels');
+        const { ProductService } = await import('@/lib/supabaseModels');
         const productData = await ProductService.getById(id);
         
         if (productData) {
@@ -52,15 +61,18 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
           // Fetch variants if it's a clothing item
           if (formattedProduct.product_type === 'clothing') {
-            const variantData = await ProductVariantService.getByProductId(productData.id);
-            setVariants(variantData);
-            // Auto-select first available size from variants
-            const firstAvailable = variantData.find(v => v.in_stock);
-            if (firstAvailable) {
-              setSelectedSize(firstAvailable.size);
-            } else {
-              // If no variants or none in stock, select 'M' as default
-              setSelectedSize('M');
+            const variantRes = await fetch(`/api/variants/${productData.id}`);
+            const variantData = await variantRes.json();
+            if (variantData.success) {
+              setVariants(variantData.data);
+              // Auto-select first available size from variants
+              const firstAvailable = variantData.data.find((v: any) => v.in_stock);
+              if (firstAvailable) {
+                setSelectedSize(firstAvailable.size);
+              } else {
+                // If no variants or none in stock, select 'M' as default
+                setSelectedSize('M');
+              }
             }
           }
 
@@ -109,11 +121,11 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const selectedVariant = variants.find(v => v.size === selectedSize);
   
   // Default sizes for clothing products without variants
-  const defaultSizes = ['S', 'M', 'L', 'XL', '2XL', '3XL'];
+  const defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
   const availableSizes = variants.length > 0 ? variants : defaultSizes.map(size => ({ 
     id: `${product.id}-${size}`,
     product_id: product.id,
-    size: size as 'S' | 'M' | 'L' | 'XL' | '2XL' | '3XL',
+    size: size as 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL',
     stock: 10,
     in_stock: true,
     created_at: new Date().toISOString(),
@@ -123,12 +135,19 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const isOutOfStock = isClothing 
     ? (selectedVariant ? !selectedVariant.in_stock : !availableSizes.some(v => v.in_stock))
     : !product.in_stock;
+  
+  const isProductOutOfStock = !product.in_stock;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-16 lg:px-8 lg:grid lg:grid-cols-2 lg:gap-x-16 min-h-[calc(100vh-16rem)] flex-grow w-full">
       {/* Image Gallery Area */}
       <div className="aspect-[4/5] rounded-sm overflow-hidden bg-zinc-100 relative w-full lg:sticky lg:top-24">
         <img src={product.image} alt={product.name} className="object-cover w-full h-full" />
+        {isProductOutOfStock && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+            <span className="text-white text-3xl font-bold uppercase tracking-widest">Out of Stock</span>
+          </div>
+        )}
       </div>
       
       {/* Product Information */}
@@ -219,7 +238,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               image: product.image,
               selectedSize: isClothing ? (selectedSize || undefined) : undefined
             }} 
-            disabled={isOutOfStock || (isClothing && !selectedSize)}
+            disabled={isOutOfStock || isProductOutOfStock || (isClothing && !selectedSize)}
           />
           <CheckoutButton
             product={{
@@ -229,7 +248,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               image: product.image,
               selectedSize: isClothing ? (selectedSize || undefined) : undefined
             }} 
-            disabled={isOutOfStock || (isClothing && !selectedSize)}
+            disabled={isOutOfStock || isProductOutOfStock || (isClothing && !selectedSize)}
           />
         </div>
       </div>
