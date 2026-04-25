@@ -24,6 +24,82 @@ export function getSupabaseAdmin() {
 export interface Database {
   public: {
     Tables: {
+      user: {
+        Row: {
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          name: string | null;
+          image: string | null;
+          password: string | null;
+          createdAt: string;
+          updatedAt: string;
+        };
+        Insert: {
+          id: string;
+          email: string;
+          emailVerified?: boolean;
+          name?: string;
+          image?: string;
+          password?: string;
+        };
+        Update: {
+          email?: string;
+          emailVerified?: boolean;
+          name?: string;
+          image?: string;
+          password?: string;
+          updatedAt?: string;
+        };
+      };
+      session: {
+        Row: {
+          id: string;
+          user_id: string;
+          expiresAt: string;
+          token: string;
+          ip_address: string | null;
+          user_agent: string | null;
+          createdAt: string;
+          updatedAt: string;
+        };
+        Insert: {
+          id: string;
+          user_id: string;
+          expiresAt: string;
+          token: string;
+          ip_address?: string;
+          user_agent?: string;
+        };
+        Update: {
+          expiresAt?: string;
+          ip_address?: string;
+          user_agent?: string;
+          updatedAt?: string;
+        };
+      };
+      admin_users: {
+        Row: {
+          id: string;
+          email: string;
+          name: string | null;
+          password_hash: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          email: string;
+          name?: string;
+          password_hash: string;
+        };
+        Update: {
+          email?: string;
+          name?: string;
+          password_hash?: string;
+          updated_at?: string;
+        };
+      };
       products: {
         Row: {
           id: string;

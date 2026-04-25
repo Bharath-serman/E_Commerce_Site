@@ -437,7 +437,7 @@ export default function ManageProducts() {
               />
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Price (USD)</label>
+              <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Price (INR)</label>
               <input
                 required
                 type="number"
@@ -653,7 +653,7 @@ export default function ManageProducts() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-zinc-900">
-                    ${product.price.toFixed(2)}
+                    ₹{product.price.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-sm ${
@@ -735,7 +735,7 @@ export default function ManageProducts() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Price (USD)</label>
+                  <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-400 mb-2">Price (INR)</label>
                   <input
                     required
                     type="number"

@@ -196,7 +196,7 @@ export default function DiscountManagement() {
 
             <div>
               <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">
-                {formData.type === 'percentage' ? 'Percentage (%)' : 'Amount ($)'}
+                {formData.type === 'percentage' ? 'Percentage (%)' : 'Amount (₹)'}
               </label>
               <input
                 type="number"
@@ -338,7 +338,7 @@ export default function DiscountManagement() {
                 <td className="px-6 py-4 text-sm font-medium text-zinc-900">{discount.name}</td>
                 <td className="px-6 py-4 text-sm text-zinc-500 capitalize">{discount.type}</td>
                 <td className="px-6 py-4 text-sm text-zinc-500">
-                  {discount.type === 'percentage' ? `${discount.value}%` : `$${discount.value}`}
+                  {discount.type === 'percentage' ? `${discount.value}%` : `₹${discount.value}`}
                 </td>
                 <td className="px-6 py-4 text-sm text-zinc-500">
                   {new Date(discount.start_date).toLocaleDateString()} - {new Date(discount.end_date).toLocaleDateString()}

@@ -92,7 +92,7 @@ export default function CartPage() {
                                 ${item.price}
                               </p>
                               <p className="mt-1 text-sm text-green-600 font-medium">
-                                ${discountedItem.discountedPrice.toFixed(2)}
+                                ₹${discountedItem.discountedPrice.toFixed(2)}
                               </p>
                             </>
                           ) : (
@@ -130,12 +130,12 @@ export default function CartPage() {
               <div className="space-y-4 text-sm text-zinc-600 mb-6 font-light">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span className="font-medium text-zinc-900">${totalPrice.toFixed(2)}</span>
+                  <span className="font-medium text-zinc-900">₹{totalPrice.toFixed(2)}</span>
                 </div>
                 {totalDiscount > 0 && (
                   <div className="flex justify-between">
                     <span>Discount Applied</span>
-                    <span className="font-medium text-green-600">-${totalDiscount.toFixed(2)}</span>
+                    <span className="font-medium text-green-600">-₹{totalDiscount.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
@@ -145,7 +145,7 @@ export default function CartPage() {
               </div>
               <div className="border-t border-zinc-200 pt-6 mb-8 flex justify-between items-center">
                 <span className="text-base font-medium text-zinc-900">Total</span>
-                <span className="text-xl font-medium text-zinc-900">${discountedTotal.toFixed(2)}</span>
+                <span className="text-xl font-medium text-zinc-900">₹{discountedTotal.toFixed(2)}</span>
               </div>
 
               <CheckoutButton isCart />

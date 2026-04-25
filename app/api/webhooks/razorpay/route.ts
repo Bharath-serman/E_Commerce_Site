@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         items: items,
         total_amount: amount,
         currency: currency,
-        status: status === 'captured' ? 'completed' : 'failed',
+        status: status === 'captured' ? 'paid' : 'failed',
         discount_applied: notes.discountApplied || 'none',
         discount_amount: parseFloat(notes.discountAmount || '0'),
         original_total: parseFloat(notes.originalTotal || '0'),
