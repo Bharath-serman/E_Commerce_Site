@@ -21,18 +21,13 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [discountedPrice, setDiscountedPrice] = useState<number | null>(null);
 
   useEffect(() => {
-    console.log('ProductCard useEffect running for product:', product._id, product.name);
     const fetchDiscountedPrice = async () => {
       try {
-        console.log('ProductCard starting discount fetch...');
         // Check both sales and discounts
         const [salesRes, discounts] = await Promise.all([
           fetch('/api/sale-discounts'),
           DiscountService.getActiveDiscounts()
         ]);
-
-        console.log('ProductCard discounts data received:', discounts);
-        console.log('ProductCard sales response:', salesRes);
 
         let bestPrice = product.price;
         let hasDiscount = false;
@@ -62,31 +57,12 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         // Check discounts
         if (discounts.length > 0) {
-          console.log('ProductCard checking discounts:', {
-            productId: product._id,
-            productName: product.name,
-            discountsCount: discounts.length,
-            discounts: discounts.map(d => ({ 
-              name: d.name, 
-              type: d.type, 
-              value: d.value,
-              applicableProducts: d.applicable_products 
-            }))
-          });
-          
           const applicableDiscount = discounts.find(discount => 
             DiscountService.getApplicableDiscount(discount, product._id, product.price)
           );
           
-          console.log('ProductCard applicable discount found:', applicableDiscount);
-          
           if (applicableDiscount) {
             const discountedPrice = DiscountService.calculateDiscountedPrice(product.price, applicableDiscount);
-            console.log('ProductCard discounted price calculation:', {
-              originalPrice: product.price,
-              discountedPrice,
-              bestPrice: bestPrice
-            });
             bestPrice = Math.min(bestPrice, discountedPrice);
             hasDiscount = true;
           }
@@ -99,7 +75,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     };
 
     fetchDiscountedPrice();
-  }, [product._id, product.name, product.category, product.price, product.sale_id]);
+  }, [product._id, product.price, product.category, product.sale_id]);
 
   return (
     <Link href={`/product/${product._id}`} className="group block">

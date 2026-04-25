@@ -24,8 +24,6 @@ export default function PageTracker() {
     if (pathname === trackedPath.current) return;
     trackedPath.current = pathname;
 
-    console.log('PageTracker: Tracking path:', pathname, 'Session:', sessionId.current);
-
     // Track page view
     const trackPageView = async () => {
       try {
@@ -40,7 +38,6 @@ export default function PageTracker() {
             session_id: sessionId.current
           })
         });
-        console.log('PageTracker: Track response status:', response.status);
       } catch (error) {
         console.error('Error tracking page view:', error);
       }
