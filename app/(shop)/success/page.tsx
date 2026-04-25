@@ -61,7 +61,7 @@ function SuccessContent() {
     // Handle Razorpay payment
     if (orderId && paymentId) {
       setLoading(true);
-      // Order should already be created by webhook, just fetch it
+      // Try to fetch existing order first
       fetch(`/api/orders/by-razorpay/${orderId}`)
         .then(res => res.json())
         .then(data => {
@@ -70,6 +70,34 @@ function SuccessContent() {
               ...data.data,
               transactionId: paymentId,
               total: data.data.total_amount * 100, // Convert to cents for display
+              lineItems: data.data.items.map((item: any) => ({
+                description: item.name,
+                quantity: item.quantity,
+                amount_total: item.price * 100
+              })),
+              metadata: {
+                discountApplied: data.data.discount_applied,
+                discountAmount: data.data.discount_amount * 100,
+                originalTotal: data.data.original_total * 100
+              }
+            });
+          } else {
+            // Order not found, create it from Razorpay order details
+            console.log('Order not found in database, creating from Razorpay...');
+            return fetch('/api/orders/create-from-razorpay', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId, paymentId })
+            });
+          }
+        })
+        .then(res => res?.json())
+        .then(data => {
+          if (data && data.success) {
+            setOrderDetails({
+              ...data.data,
+              transactionId: paymentId,
+              total: data.data.total_amount * 100,
               lineItems: data.data.items.map((item: any) => ({
                 description: item.name,
                 quantity: item.quantity,
@@ -166,7 +194,7 @@ function SuccessContent() {
                       <span className="text-sm text-zinc-500 font-light">Qty: {item.quantity}</span>
                     </div>
                     <span className="text-base font-medium text-black">
-                      ${(item.amount_total / 100).toFixed(2)}
+                      ₹{(item.amount_total / 100).toFixed(2)}
                     </span>
                   </div>
                 ))}
@@ -175,11 +203,11 @@ function SuccessContent() {
               <div className="mt-12 pt-8 border-t border-zinc-200 space-y-4">
                 <div className="flex justify-between text-sm text-zinc-500">
                   <span>Subtotal</span>
-                  <span>${(orderDetails.total / 100).toFixed(2)}</span>
+                  <span>₹{(orderDetails.total / 100).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold text-black pt-2">
                   <span className="uppercase tracking-widest">Total Paid</span>
-                  <span>${(orderDetails.total / 100).toFixed(2)}</span>
+                  <span>₹{(orderDetails.total / 100).toFixed(2)}</span>
                 </div>
                 
                 {orderDetails.metadata?.discountApplied && orderDetails.metadata.discountApplied !== 'none' && (
@@ -190,11 +218,11 @@ function SuccessContent() {
                     </div>
                     <div className="flex justify-between items-center mt-2">
                       <span className="text-sm text-green-700">Original Total</span>
-                      <span className="text-sm font-medium">${orderDetails.metadata.originalTotal ? (parseFloat(orderDetails.metadata.originalTotal) / 100).toFixed(2) : '0.00'}</span>
+                      <span className="text-sm font-medium">₹{orderDetails.metadata.originalTotal ? (parseFloat(orderDetails.metadata.originalTotal) / 100).toFixed(2) : '0.00'}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-green-700">Discount Amount</span>
-                      <span className="text-sm font-medium text-green-600">-${orderDetails.metadata.discountAmount ? (parseFloat(orderDetails.metadata.discountAmount) / 100).toFixed(2) : '0.00'}</span>
+                      <span className="text-sm font-medium text-green-600">-₹{orderDetails.metadata.discountAmount ? (parseFloat(orderDetails.metadata.discountAmount) / 100).toFixed(2) : '0.00'}</span>
                     </div>
                   </div>
                 )}

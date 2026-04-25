@@ -24,6 +24,7 @@ export default function CheckoutButton({ productId, product, isCart = false, dis
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const { items } = useCart();
 
   useEffect(() => {
@@ -41,9 +42,32 @@ export default function CheckoutButton({ productId, product, isCart = false, dis
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    // Load Razorpay script dynamically
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => {
+      setRazorpayLoaded(true);
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
   const handleCheckout = async () => {
     if (!session) {
       setShowAuthModal(true);
+      return;
+    }
+
+    // Check if Razorpay is loaded
+    if (!(window as any).Razorpay) {
+      alert("Payment gateway is loading. Please try again in a moment.");
       return;
     }
 
@@ -69,14 +93,29 @@ export default function CheckoutButton({ productId, product, isCart = false, dis
 
       const data = await response.json();
       if (data.orderId) {
+        // Generate product description for Razorpay
+        const productDescription = checkoutItems.length === 1
+          ? checkoutItems[0].name
+          : `${checkoutItems.length} items: ${checkoutItems.map(item => item.name).join(', ')}`;
+
+        console.log('Razorpay checkout items:', checkoutItems);
+        console.log('Product description:', productDescription);
+
         // Initialize Razorpay checkout
         const options = {
           key: data.key_id,
           amount: data.amount,
           currency: data.currency,
-          name: 'Aesthetic Premium Store',
-          description: 'Premium Products',
+          name: productDescription,
+          description: `Total: ₹${(data.amount / 100).toFixed(2)}`,
           order_id: data.orderId,
+          notes: {
+            items: JSON.stringify(checkoutItems.map(item => ({
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity
+            })))
+          },
           handler: function (response: any) {
             // Payment successful - redirect to success page
             window.location.href = `/success?order_id=${response.razorpay_order_id}&payment_id=${response.razorpay_payment_id}`;
@@ -124,7 +163,6 @@ export default function CheckoutButton({ productId, product, isCart = false, dis
 
   return (
     <>
-      <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
       <button
         onClick={handleCheckout}
         disabled={disabled || loading || (isCart && items.length === 0)}

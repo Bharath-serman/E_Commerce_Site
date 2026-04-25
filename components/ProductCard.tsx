@@ -122,11 +122,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="text-right">
           {discountedPrice !== null ? (
             <div>
-              <p className="text-sm font-medium text-red-600">${discountedPrice.toFixed(2)}</p>
-              <p className="text-xs text-zinc-400 line-through">${product.price.toFixed(2)}</p>
+              <p className="text-sm font-medium text-red-600">₹{discountedPrice.toFixed(2)}</p>
+              <p className="text-xs text-zinc-400 line-through">₹{product.price.toFixed(2)}</p>
             </div>
           ) : (
-            <p className="text-sm font-medium">${product.price.toFixed(2)}</p>
+            <p className="text-sm font-medium">₹{product.price.toFixed(2)}</p>
           )}
         </div>
       </div>

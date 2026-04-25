@@ -108,7 +108,7 @@ export default function DiscountBadge({ productId, productName, price, category,
         {percentage} OFF
       </div>
       <div className="mt-1 bg-green-600 text-white px-2 py-1 rounded-sm text-xs font-bold">
-        Save ${savings.toFixed(2)}
+        Save ₹{savings.toFixed(2)}
       </div>
     </div>
   );

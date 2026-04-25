@@ -82,12 +82,12 @@ export async function POST(req: Request) {
 
     // Calculate total amount in paise (Razorpay uses paise for INR, or smallest currency unit)
     const totalAmount = discountResult ? discountResult.discountedItems.reduce((sum: number, item: any) => sum + (item.discountedPrice * item.quantity), 0) : items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-    const amountInPaise = Math.round(totalAmount * 100); // Assuming USD, multiply by 100. For INR, this is already paise.
+    const amountInPaise = Math.round(totalAmount * 100); // Convert to paise for INR
 
     // Create Razorpay order
     const options = {
       amount: amountInPaise,
-      currency: 'USD',
+      currency: 'INR',
       receipt: `order_${Date.now()}`,
       notes: {
         discountApplied: appliedDiscounts.length > 0 ? appliedDiscounts.map((d: any) => d.title).join(', ') : 'none',

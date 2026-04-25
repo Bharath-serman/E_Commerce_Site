@@ -100,7 +100,7 @@ export default function ProductSelector({ selectedProducts, onSelectionChange }:
             />
             <div className="flex-1">
               <div className="text-sm font-medium text-zinc-900">{product.name}</div>
-              <div className="text-xs text-zinc-500">${product.price}</div>
+              <div className="text-xs text-zinc-500">₹{product.price}</div>
             </div>
           </label>
         ))}

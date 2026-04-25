@@ -168,11 +168,11 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
           <div className="flex items-center gap-4">
             {discountedPrice !== null ? (
               <>
-                <p className="text-2xl font-light text-zinc-400 line-through">${product.price.toFixed(2)}</p>
-                <p className="text-2xl font-light text-green-600">${discountedPrice.toFixed(2)}</p>
+                <p className="text-2xl font-light text-zinc-400 line-through">₹{product.price.toFixed(2)}</p>
+                <p className="text-2xl font-light text-green-600">₹{discountedPrice.toFixed(2)}</p>
               </>
             ) : (
-              <p className="text-2xl font-light text-zinc-900">${product.price.toFixed(2)}</p>
+              <p className="text-2xl font-light text-zinc-900">₹{product.price.toFixed(2)}</p>
             )}
             {isOutOfStock && (
               <span className="text-sm font-medium text-red-600 uppercase tracking-widest">Out of Stock</span>

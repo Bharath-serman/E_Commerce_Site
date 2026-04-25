@@ -50,7 +50,11 @@ export default function AdminDashboard() {
     }
 
     const filtered = orders.filter(order => {
-      const referenceId = order.stripe_session_id ? `#${order.stripe_session_id.slice(-8).toUpperCase()}` : '#N/A';
+      const referenceId = order.stripe_session_id
+        ? `#${order.stripe_session_id.slice(-8).toUpperCase()}`
+        : order.razorpay_order_id
+        ? `#${order.razorpay_order_id.slice(-8).toUpperCase()}`
+        : '#N/A';
       return (
         referenceId.toLowerCase().includes(term) ||
         order.customer_name?.toLowerCase().includes(term) ||
@@ -147,11 +151,15 @@ export default function AdminDashboard() {
                       </td>
                     </tr>
                   ) : displayedOrders.map((order) => (
-                    <tr key={order._id} className="hover:bg-zinc-50 transition-colors">
+                    <tr key={order.id} className="hover:bg-zinc-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col">
                           <span className="text-[10px] text-zinc-900 font-mono font-bold">
-                            #{order.stripe_session_id ? order.stripe_session_id.slice(-8).toUpperCase() : 'N/A'}
+                            #{order.stripe_session_id
+                              ? order.stripe_session_id.slice(-8).toUpperCase()
+                              : order.razorpay_order_id
+                              ? order.razorpay_order_id.slice(-8).toUpperCase()
+                              : 'N/A'}
                           </span>
                           <span className="text-[9px] text-zinc-400 uppercase tracking-tighter">Order Reference</span>
                         </div>
@@ -179,7 +187,7 @@ export default function AdminDashboard() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-zinc-900">
-                        ${order.total_amount ? order.total_amount.toFixed(2) : '0.00'}
+                        ₹{order.total_amount ? order.total_amount.toFixed(2) : '0.00'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <span className="px-2.5 py-1 inline-flex text-[10px] leading-5 font-bold rounded-full bg-green-50 text-green-700 uppercase tracking-widest border border-green-100 shadow-sm">
