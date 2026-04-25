@@ -24,7 +24,7 @@ export default function CheckoutButton({ productId, product, isCart = false, dis
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [razorpayLoading, setRazorpayLoading] = useState(false);
   const { items } = useCart();
 
   useEffect(() => {
@@ -42,22 +42,28 @@ export default function CheckoutButton({ productId, product, isCart = false, dis
     checkAuth();
   }, []);
 
-  useEffect(() => {
-    // Load Razorpay script dynamically
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onload = () => {
-      setRazorpayLoaded(true);
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
+  const loadRazorpayScript = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if ((window as any).Razorpay) {
+        resolve();
+        return;
       }
-    };
-  }, []);
+
+      const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve());
+        existingScript.addEventListener('error', () => reject());
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load Razorpay'));
+      document.body.appendChild(script);
+    });
+  };
 
   const handleCheckout = async () => {
     if (!session) {
@@ -65,13 +71,20 @@ export default function CheckoutButton({ productId, product, isCart = false, dis
       return;
     }
 
-    // Check if Razorpay is loaded
-    if (!(window as any).Razorpay) {
-      alert("Payment gateway is loading. Please try again in a moment.");
+    setLoading(true);
+    setRazorpayLoading(true);
+
+    try {
+      await loadRazorpayScript();
+    } catch (error) {
+      alert("Failed to load payment gateway. Please try again.");
+      setLoading(false);
+      setRazorpayLoading(false);
       return;
     }
 
-    setLoading(true);
+    setRazorpayLoading(false);
+
     try {
       // Determine what items to send to Razorpay
       let checkoutItems: any[] = [];
@@ -97,9 +110,6 @@ export default function CheckoutButton({ productId, product, isCart = false, dis
         const productDescription = checkoutItems.length === 1
           ? checkoutItems[0].name
           : `${checkoutItems.length} items: ${checkoutItems.map(item => item.name).join(', ')}`;
-
-        console.log('Razorpay checkout items:', checkoutItems);
-        console.log('Product description:', productDescription);
 
         // Initialize Razorpay checkout
         const options = {
@@ -165,10 +175,10 @@ export default function CheckoutButton({ productId, product, isCart = false, dis
     <>
       <button
         onClick={handleCheckout}
-        disabled={disabled || loading || (isCart && items.length === 0)}
+        disabled={disabled || loading || razorpayLoading || (isCart && items.length === 0)}
         className="w-full bg-black text-white px-8 py-4 text-xs tracking-[0.2em] uppercase font-bold rounded-sm hover:bg-zinc-800 transition-all disabled:bg-zinc-300 disabled:text-zinc-500 disabled:cursor-not-allowed shadow-lg"
       >
-        {loading ? "Redirecting..." : disabled ? "Purchase Now" : buttonText}
+        {razorpayLoading ? "Loading Payment..." : loading ? "Redirecting..." : disabled ? "Purchase Now" : buttonText}
       </button>
       <AuthModal
         isOpen={showAuthModal}

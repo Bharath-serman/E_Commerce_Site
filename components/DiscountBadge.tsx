@@ -77,7 +77,7 @@ export default function DiscountBadge({ productId, productName, price, category,
     };
 
     fetchDiscounts();
-  }, [productId, productName, price, category, sale_id]);
+  }, [productId, price, category, sale_id]);
 
   if (loading || !sale) {
     return null;

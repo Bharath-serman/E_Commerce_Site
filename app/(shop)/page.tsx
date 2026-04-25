@@ -78,27 +78,30 @@ export default async function HomePage() {
   // All products - show all products regardless of sales
   const regularProducts = products;
 
+  // Memoize sale props to prevent unnecessary re-renders
+  const memoizedSales = activeSales.map((sale) => ({
+    title: sale.title,
+    description: sale.description,
+    bannerText: sale.banner_text,
+    discountType: sale.discount_type,
+    discountValue: sale.discount_value,
+    endDate: sale.end_date,
+    backgroundColor: sale.background_color || '#000000',
+    textColor: sale.text_color || '#ffffff',
+    bannerImage: sale.banner_image || '',
+    showCountdown: sale.show_countdown
+  }));
+
   return (
     <main className="flex-grow w-full">
       {/* Sale Banners */}
       {activeSales.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full">
           <div className="space-y-8">
-            {activeSales.map((sale) => (
+            {activeSales.map((sale, index) => (
               <SaleBanner 
                 key={sale.id} 
-                sale={{
-                  title: sale.title,
-                  description: sale.description,
-                  bannerText: sale.banner_text,
-                  discountType: sale.discount_type,
-                  discountValue: sale.discount_value,
-                  endDate: sale.end_date,
-                  backgroundColor: sale.background_color || '#000000',
-                  textColor: sale.text_color || '#ffffff',
-                  bannerImage: sale.banner_image || '',
-                  showCountdown: sale.show_countdown
-                }} 
+                sale={memoizedSales[index]} 
               />
             ))}
           </div>
