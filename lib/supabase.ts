@@ -199,7 +199,6 @@ export interface Database {
           id: string;
           customer_name: string;
           customer_email: string;
-          stripe_session_id?: string;
           razorpay_order_id?: string;
           razorpay_payment_id?: string;
           transaction_id?: string;
@@ -218,7 +217,6 @@ export interface Database {
         Insert: {
           customer_name: string;
           customer_email: string;
-          stripe_session_id?: string;
           razorpay_order_id?: string;
           razorpay_payment_id?: string;
           transaction_id?: string;
@@ -235,7 +233,6 @@ export interface Database {
         Update: {
           customer_name?: string;
           customer_email?: string;
-          stripe_session_id?: string;
           razorpay_order_id?: string;
           razorpay_payment_id?: string;
           transaction_id?: string;

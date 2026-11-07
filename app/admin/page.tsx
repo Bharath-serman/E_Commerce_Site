@@ -50,10 +50,10 @@ export default function AdminDashboard() {
     }
 
     const filtered = orders.filter(order => {
-      const referenceId = order.stripe_session_id
-        ? `#${order.stripe_session_id.slice(-8).toUpperCase()}`
-        : order.razorpay_order_id
+      const referenceId = order.razorpay_order_id
         ? `#${order.razorpay_order_id.slice(-8).toUpperCase()}`
+        : order.id
+        ? `#${order.id.slice(-8).toUpperCase()}`
         : '#N/A';
       return (
         referenceId.toLowerCase().includes(term) ||
@@ -155,10 +155,10 @@ export default function AdminDashboard() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col">
                           <span className="text-[10px] text-zinc-900 font-mono font-bold">
-                            #{order.stripe_session_id
-                              ? order.stripe_session_id.slice(-8).toUpperCase()
-                              : order.razorpay_order_id
+                            #{order.razorpay_order_id
                               ? order.razorpay_order_id.slice(-8).toUpperCase()
+                              : order.id
+                              ? order.id.slice(-8).toUpperCase()
                               : 'N/A'}
                           </span>
                           <span className="text-[9px] text-zinc-400 uppercase tracking-tighter">Order Reference</span>
