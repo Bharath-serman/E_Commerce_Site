@@ -3,10 +3,10 @@ import { OrderService } from '@/lib/supabaseModels';
 
 export async function POST(req: Request) {
   try {
-    const { stripeSessionId, transactionId, customerName, customerEmail, items, totalAmount } = await req.json();
+    const { razorpayOrderId, transactionId, customerName, customerEmail, items, totalAmount } = await req.json();
     
     console.log('Creating order with data:', {
-      stripeSessionId,
+      razorpayOrderId,
       transactionId,
       customerName,
       customerEmail,
@@ -15,14 +15,18 @@ export async function POST(req: Request) {
     });
     
     // Check if order already exists to prevent duplicates on page refresh
-    const existingOrder = await OrderService.getByStripeSessionId(stripeSessionId);
-    if (existingOrder) {
-      console.log('Order already exists for session:', stripeSessionId);
-      return NextResponse.json({ success: true, message: 'Order already recorded' });
+    if (razorpayOrderId) {
+      const existingOrder = await OrderService.getByRazorpayOrderId(razorpayOrderId);
+      if (existingOrder) {
+        console.log('Order already exists for Razorpay order:', razorpayOrderId);
+        return NextResponse.json({ success: true, message: 'Order already recorded' });
+      }
     }
     
     const orderData = {
-      stripe_session_id: stripeSessionId,
+      razorpay_order_id: razorpayOrderId,
+      razorpay_payment_id: transactionId,
+      transaction_id: transactionId,
       customer_name: customerName,
       customer_email: customerEmail,
       items: items,

@@ -4,11 +4,11 @@ import Link from 'next/link';
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useCart } from '@/contexts/CartContext';
+import { jsPDF } from 'jspdf';
 
 function SuccessContent() {
   const { clearCart } = useCart();
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get('session_id');
   const orderId = searchParams.get('order_id');
   const paymentId = searchParams.get('payment_id');
 
@@ -17,35 +17,102 @@ function SuccessContent() {
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  const downloadReceipt = async (receiptUrl: string) => {
+  const downloadPdfInvoice = () => {
+    if (!orderDetails) return;
+
     try {
       setDownloading(true);
-      
-      const response = await fetch('/api/receipt/download', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ receiptUrl }),
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Top Brand Header
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.text('AESTHETIC / BETHY', 20, 24);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(110, 110, 110);
+      doc.text('OFFICIAL ORDER RECEIPT & TAX INVOICE', 20, 31);
+
+      // Horizontal Divider
+      doc.setDrawColor(210, 210, 210);
+      doc.setLineWidth(0.5);
+      doc.line(20, 36, pageWidth - 20, 36);
+
+      // Order & Customer Details (2 columns)
+      doc.setFontSize(9);
+      doc.setTextColor(40, 40, 40);
+
+      const refId = orderDetails.transactionId || orderDetails.transaction_id || orderDetails.id || orderId || 'N/A';
+      const orderDate = new Date().toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to download receipt');
-      }
+      doc.text(`Order Reference: #${String(refId).slice(-12).toUpperCase()}`, 20, 46);
+      doc.text(`Order Date: ${orderDate}`, 20, 52);
+      doc.text(`Payment Status: PAID`, 20, 58);
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `receipt-${orderId?.slice(0, 8) || sessionId?.slice(0, 8)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-    } catch (error) {
-      console.error('Error downloading receipt:', error);
-      alert('Failed to download receipt. Please try again.');
+      doc.text(`Customer: ${orderDetails.customer_name || 'Customer'}`, pageWidth - 80, 46);
+      doc.text(`Email: ${orderDetails.customer_email || 'N/A'}`, pageWidth - 80, 52);
+
+      // Table Header
+      doc.setFillColor(245, 245, 245);
+      doc.rect(20, 68, pageWidth - 40, 9, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('Item Description', 25, 74);
+      doc.text('Qty', pageWidth - 70, 74);
+      doc.text('Amount (INR)', pageWidth - 45, 74);
+
+      // Items Rows
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(40, 40, 40);
+      let y = 85;
+
+      const items = orderDetails.lineItems || [];
+      items.forEach((item: any, idx: number) => {
+        const itemText = `${idx + 1}. ${item.description || 'Product'}`;
+        doc.text(itemText, 25, y);
+        doc.text(String(item.quantity || 1), pageWidth - 68, y);
+        doc.text(`Rs. ${(item.amount_total / 100).toFixed(2)}`, pageWidth - 45, y);
+        y += 8;
+      });
+
+      // Bottom Divider
+      doc.line(20, y + 2, pageWidth - 20, y + 2);
+      y += 12;
+
+      // Totals
+      const subtotalFormatted = (orderDetails.total / 100).toFixed(2);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Subtotal:', pageWidth - 85, y);
+      doc.text(`Rs. ${subtotalFormatted}`, pageWidth - 45, y);
+      y += 7;
+
+      doc.text('Shipping:', pageWidth - 85, y);
+      doc.text('FREE', pageWidth - 45, y);
+      y += 8;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Total Paid:', pageWidth - 85, y);
+      doc.text(`Rs. ${subtotalFormatted}`, pageWidth - 45, y);
+
+      // Footer
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+      doc.setTextColor(140, 140, 140);
+      doc.text('Thank you for shopping with Aesthetic / Bethy Store.', 20, y + 25);
+      doc.text('For queries regarding your order, contact support@bethy.com', 20, y + 30);
+
+      doc.save(`Bill_${orderId?.slice(0, 8) || 'Order'}.pdf`);
+    } catch (err) {
+      console.error('Error generating PDF bill:', err);
+      alert('Unable to generate PDF. Please try again.');
     } finally {
       setDownloading(false);
     }
@@ -58,90 +125,78 @@ function SuccessContent() {
     // Clear cart context on successful arrival
     clearCart();
 
-    // Handle Razorpay payment
-    if (orderId && paymentId) {
+    // Handle Razorpay or UPI order payment
+    if (orderId) {
       setLoading(true);
-      // Try to fetch existing order first
-      fetch(`/api/orders/by-razorpay/${orderId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
+      // Try to fetch existing order first (by Razorpay ID or direct ID)
+      const fetchOrder = async () => {
+        try {
+          let res = await fetch(`/api/orders/by-razorpay/${orderId}`);
+          let data = await res.json();
+
+          if (!data.success) {
+            // Try fetching by primary order ID
+            res = await fetch(`/api/orders/${orderId}`);
+            data = await res.json();
+          }
+
+          if (data.success && data.data) {
+            const ord = data.data;
             setOrderDetails({
-              ...data.data,
-              transactionId: paymentId,
-              total: data.data.total_amount * 100, // Convert to cents for display
-              lineItems: data.data.items.map((item: any) => ({
+              ...ord,
+              transactionId: paymentId || ord.transaction_id || ord.razorpay_payment_id || 'CONFIRMED',
+              total: ord.total_amount * 100,
+              lineItems: (ord.items || []).map((item: any) => ({
                 description: item.name,
                 quantity: item.quantity,
-                amount_total: item.price * 100
+                amount_total: (item.price || 0) * 100,
               })),
               metadata: {
-                discountApplied: data.data.discount_applied,
-                discountAmount: data.data.discount_amount * 100,
-                originalTotal: data.data.original_total * 100
-              }
+                discountApplied: ord.discount_applied,
+                discountAmount: (ord.discount_amount || 0) * 100,
+                originalTotal: (ord.original_total || ord.total_amount) * 100,
+              },
             });
-          } else {
-            // Order not found, create it from Razorpay order details
-            console.log('Order not found in database, creating from Razorpay...');
-            return fetch('/api/orders/create-from-razorpay', {
+            return;
+          }
+
+          // If not in database and paymentId exists, try create from Razorpay
+          if (paymentId) {
+            const createRes = await fetch('/api/orders/create-from-razorpay', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ orderId, paymentId })
+              body: JSON.stringify({ orderId, paymentId }),
             });
+            const createData = await createRes.json();
+            if (createData?.success && createData.data) {
+              const ord = createData.data;
+              setOrderDetails({
+                ...ord,
+                transactionId: paymentId,
+                total: ord.total_amount * 100,
+                lineItems: (ord.items || []).map((item: any) => ({
+                  description: item.name,
+                  quantity: item.quantity,
+                  amount_total: (item.price || 0) * 100,
+                })),
+                metadata: {
+                  discountApplied: ord.discount_applied,
+                  discountAmount: (ord.discount_amount || 0) * 100,
+                  originalTotal: (ord.original_total || ord.total_amount) * 100,
+                },
+              });
+            }
           }
-        })
-        .then(res => res?.json())
-        .then(data => {
-          if (data && data.success) {
-            setOrderDetails({
-              ...data.data,
-              transactionId: paymentId,
-              total: data.data.total_amount * 100,
-              lineItems: data.data.items.map((item: any) => ({
-                description: item.name,
-                quantity: item.quantity,
-                amount_total: item.price * 100
-              })),
-              metadata: {
-                discountApplied: data.data.discount_applied,
-                discountAmount: data.data.discount_amount * 100,
-                originalTotal: data.data.original_total * 100
-              }
-            });
-          }
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
+        } catch (err) {
+          console.error('Error fetching order receipt:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchOrder();
     }
-    // Handle Stripe session (legacy)
-    else if (sessionId) {
-      setLoading(true);
-      fetch(`/api/checkout/${sessionId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            setOrderDetails(data);
-            
-            // Sync with our database
-            fetch('/api/orders', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                stripeSessionId: sessionId,
-                transactionId: data.transactionId,
-                customerName: data.customerName,
-                customerEmail: data.customerEmail, 
-                items: data.lineItems,
-                totalAmount: data.total / 100
-              })
-            }).catch(err => console.error("Database sync failed:", err));
-          }
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
-    }
-  }, [sessionId, orderId, paymentId, clearCart]);
+  }, [orderId, paymentId, clearCart]);
 
   if (!mounted) return null;
 
@@ -229,11 +284,24 @@ function SuccessContent() {
               </div>
 
               <div className="mt-12 flex flex-col sm:flex-row gap-4 items-center">
+                <button
+                  type="button"
+                  disabled={downloading}
+                  onClick={downloadPdfInvoice}
+                  className="w-full sm:w-auto bg-black text-white px-8 py-4 text-xs tracking-[0.2em] uppercase font-bold rounded-sm shadow-lg hover:bg-zinc-800 transition-all text-center flex items-center justify-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  {downloading ? 'Preparing PDF...' : 'Download Bill (PDF)'}
+                </button>
                 <Link
                   href="/"
-                  className="w-full sm:w-auto bg-black text-white px-8 py-4 text-xs tracking-[0.2em] uppercase font-bold rounded-sm shadow-lg hover:bg-zinc-800 transition-all text-center"
+                  className="w-full sm:w-auto border border-zinc-300 text-zinc-800 px-8 py-4 text-xs tracking-[0.2em] uppercase font-bold rounded-sm hover:bg-zinc-50 transition-all text-center"
                 >
-                  Return to Home
+                  Back to Home Screen
                 </Link>
               </div>
             </div>

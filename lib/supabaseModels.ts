@@ -224,24 +224,6 @@ export class OrderService {
     return data;
   }
 
-  static async getByStripeSessionId(sessionId: string): Promise<Order | null> {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('stripe_session_id', sessionId)
-      .maybeSingle(); // Use maybeSingle() instead of single() to handle no results
-
-    if (error) {
-      // If error is "PGRST116" (no rows), return null instead of throwing
-      if (error.code === 'PGRST116') {
-        return null;
-      }
-      throw error;
-    }
-    
-    return data;
-  }
-
   static async getByRazorpayOrderId(orderId: string): Promise<Order | null> {
     const { data, error } = await supabase
       .from('orders')

@@ -1,24 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { sql } from '@/lib/db';
 import bcrypt from 'bcrypt';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
 
-    // Fetch admin user from database
-    const { data: adminUser, error } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('email', email)
-      .single();
+    if (!email || !password) {
+      return NextResponse.json(
+        { success: false, error: 'Email and password are required' },
+        { status: 400 }
+      );
+    }
 
-    if (error || !adminUser) {
+    // Fetch admin user from database directly
+    const [adminUser] = await sql`
+      SELECT * FROM admin_users
+      WHERE email = ${email}
+      LIMIT 1
+    `;
+
+    if (!adminUser) {
       return NextResponse.json(
         { success: false, error: 'Invalid credentials' },
         { status: 401 }
