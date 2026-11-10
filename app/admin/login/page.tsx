@@ -50,10 +50,10 @@ export default function AdminLoginPage() {
         <div className="w-[500px] justify-center">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold tracking-widest uppercase text-black">
-            AESTHETIC ADMIN PANEL
+            BETHY ADMIN PANEL
           </h1>
           <h2 className="text-2xl font-medium text-zinc-900 mt-6">Sign In</h2>
-          <p className="text-zinc-500 mt-2">Welcome to Aesthetic's Admin Page</p>
+          <p className="text-zinc-500 mt-2">Welcome to Bethy's Admin Page</p>
         </div>
       
 
@@ -81,7 +81,7 @@ export default function AdminLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-blue-50 border border-zinc-300 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-black"
-                placeholder="admin@aesthetic.com"
+                placeholder="admin@bethy.com"
               />
             </div>
 

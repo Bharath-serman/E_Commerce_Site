@@ -88,7 +88,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         {/* Logo */}
         <Link href="/" onClick={handleLogoClick} className="text-2xl font-bold tracking-widest uppercase text-black font-playfair flex-shrink-0">
-          Aesthetic
+          Bethy
         </Link>
         
         {/* Amazon-like Search Bar merged with Premium Look */}

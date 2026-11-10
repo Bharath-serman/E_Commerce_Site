@@ -28,7 +28,7 @@ function SuccessContent() {
       // Top Brand Header
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(22);
-      doc.text('AESTHETIC / BETHY', 20, 24);
+      doc.text('BETHY', 20, 24);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
@@ -106,7 +106,7 @@ function SuccessContent() {
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8);
       doc.setTextColor(140, 140, 140);
-      doc.text('Thank you for shopping with Aesthetic / Bethy Store.', 20, y + 25);
+      doc.text('Thank you for shopping with Bethy Store.', 20, y + 25);
       doc.text('For queries regarding your order, contact support@bethy.com', 20, y + 30);
 
       doc.save(`Bill_${orderId?.slice(0, 8) || 'Order'}.pdf`);

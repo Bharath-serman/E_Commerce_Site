@@ -38,7 +38,7 @@ export default function VerifyEmailSuccessPage() {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold tracking-widest uppercase text-black font-playfair">
-            Aesthetic
+            Bethy
           </h1>
         </div>
 

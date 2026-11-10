@@ -39,7 +39,7 @@ export default function BrandedSpinner({ size = 'md', color = 'black' }: Branded
       {/* Optional: Full Name as a secondary element if large enough */}
       {size === 'xl' && (
         <span className="absolute -bottom-10 font-playfair font-medium uppercase tracking-[0.4em] text-zinc-400 text-xs text-nowrap">
-          Aesthetic
+          Bethy
         </span>
       )}
     </div>

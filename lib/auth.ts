@@ -34,7 +34,7 @@ export const auth = betterAuth({
       try {
         console.log("Attempting to send email via Resend...");
         const result = await resend.emails.send({
-          from: "Aesthetic <onboarding@resend.dev>",
+          from: "Bethy <onboarding@resend.dev>",
           to: user.email,
           subject: "Verify your email address",
           html: `
@@ -52,12 +52,12 @@ export const auth = betterAuth({
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
                         <tr>
                           <td style="padding: 40px 40px 20px 40px; text-align: center; border-bottom: 1px solid #e4e4e7;">
-                            <h1 style="margin: 0; font-size: 32px; font-weight: bold; letter-spacing: 0.2em; text-transform: uppercase; color: #000000;">AESTHETIC</h1>
+                            <h1 style="margin: 0; font-size: 32px; font-weight: bold; letter-spacing: 0.2em; text-transform: uppercase; color: #000000;">BETHY</h1>
                           </td>
                         </tr>
                         <tr>
                           <td style="padding: 40px 40px 20px 40px;">
-                            <h2 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 500; color: #18181b;">Welcome to Aesthetic!</h2>
+                            <h2 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 500; color: #18181b;">Welcome to Bethy!</h2>
                             <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #52525b;">
                               Thank you for creating an account. Please verify your email address by clicking the button below:
                             </p>
@@ -86,7 +86,7 @@ export const auth = betterAuth({
                         <tr>
                           <td style="padding: 20px 40px; background-color: #f4f4f5; border-top: 1px solid #e4e4e7; border-radius: 0 0 4px 4px;">
                             <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #a1a1aa; text-align: center;">
-                              © 2024 Aesthetic. All rights reserved.
+                              © 2024 Bethy. All rights reserved.
                             </p>
                           </td>
                         </tr>
@@ -122,7 +122,7 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24, // 1 day
   },
   advanced: {
-    cookiePrefix: "aesthetic",
+    cookiePrefix: "bethy",
   },
   db: {
     user: "user",

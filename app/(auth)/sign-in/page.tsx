@@ -54,7 +54,7 @@ export default function SignInPage() {
             AESTHETIC
           </Link>
           <h1 className="text-2xl font-medium text-zinc-900 mt-6">Sign In</h1>
-          <p className="text-zinc-500 mt-2">Welcome back to Aesthetic</p>
+          <p className="text-zinc-500 mt-2">Welcome back to Bethy</p>
         </div>
 
         <div className="bg-white border border-zinc-200 rounded-lg shadow-sm p-8">

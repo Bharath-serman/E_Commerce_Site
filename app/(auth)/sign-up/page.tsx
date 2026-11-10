@@ -66,10 +66,10 @@ export default function SignUpPage() {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <Link href="/" className="text-3xl font-bold tracking-widest uppercase text-black font-playfair">
-            Aesthetic
+            Bethy
           </Link>
           <h1 className="text-2xl font-medium text-zinc-900 mt-6">Sign Up</h1>
-          <p className="text-zinc-500 mt-2">Create your Aesthetic account</p>
+          <p className="text-zinc-500 mt-2">Create your Bethy account</p>
         </div>
 
         <div className="bg-white border border-zinc-200 rounded-sm p-8">

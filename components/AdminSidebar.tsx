@@ -19,7 +19,7 @@ export default function AdminSidebar() {
     <aside className="w-64 bg-zinc-900 text-white flex flex-col h-screen sticky top-0">
       <div className="p-8 border-b border-zinc-800">
         <Link href="/admin" className="text-xl font-bold tracking-widest uppercase font-playfair">
-          Aesthetic Admin
+          Bethy Admin
         </Link>
       </div>
       
