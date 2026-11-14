@@ -109,23 +109,25 @@ export default async function HomePage() {
       )}
 
       {/* Enhanced 4K Video Hero Section */}
-      <section className="relative w-full h-screen min-h-[800px] flex items-center justify-center overflow-hidden">
+      <section className="relative w-full h-[90vh] min-h-[640px] max-h-[920px] overflow-hidden">
         <VideoBackground 
-          videoSrc="/videos/TQQ.mp4"  //Background video source.
+          videoSrc="/videos/Bethy_Website_Hero.mp4"
           className="w-full h-full"
+          overlayClassName="bg-gradient-to-t from-black/90 via-black/20 to-black/10"
+          contentClassName="flex items-end justify-center pb-12 sm:pb-16 lg:pb-20"
         >
-          <div className="flex flex-col items-center text-center px-4 max-w-5xl mx-auto transform transition-all duration-700 ease-out">
-            <h1 className="text-6xl md:text-8xl lg:text-9xl text-white font-playfair font-medium tracking-tight mb-8 leading-tight transform hover:scale-105 transition-transform duration-500">
-              Elevate Your Everyday
+          <div className="flex flex-col items-center text-center px-4 max-w-4xl mx-auto">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl text-white font-playfair font-normal tracking-wide mb-3 leading-tight drop-shadow-md">
+              Bethy Store
             </h1>
-            <p className="text-xl md:text-2xl lg:text-3xl text-zinc-100 font-light mb-12 max-w-3xl leading-relaxed">
+            <p className="text-xs sm:text-sm md:text-base text-zinc-200/90 font-light mb-8 max-w-xl mx-auto leading-relaxed drop-shadow-sm">
               Discover a curated collection of premium essentials designed for the modern lifestyle.
             </p>
-            <div className="flex gap-6 flex-col sm:flex-row items-center">
+            <div className="flex flex-wrap gap-4 items-center justify-center">
               {saleProducts.length > 0 && (
                 <Link 
                   href="#sale-items" 
-                  className="border-2 border-white text-white px-12 py-5 text-sm tracking-[0.3em] uppercase font-bold hover:bg-white hover:text-black transition-all duration-300 rounded-sm hover:scale-105 transform"
+                  className="border border-white/80 bg-white/10 backdrop-blur-sm text-white px-7 py-3 text-xs tracking-[0.2em] uppercase font-medium hover:bg-white hover:text-black transition-all duration-300 rounded-sm"
                 >
                   Shop Sale Items
                 </Link>
@@ -133,14 +135,14 @@ export default async function HomePage() {
               {discountProducts.length > 0 && (
                 <Link 
                   href="#discount-items" 
-                  className="border-2 border-white text-white px-12 py-5 text-sm tracking-[0.3em] uppercase font-bold hover:bg-white hover:text-black transition-all duration-300 rounded-sm hover:scale-105 transform"
+                  className="border border-white/80 bg-white/10 backdrop-blur-sm text-white px-7 py-3 text-xs tracking-[0.2em] uppercase font-medium hover:bg-white hover:text-black transition-all duration-300 rounded-sm"
                 >
                   Shop Discount Items
                 </Link>
               )}
               <Link 
                 href="/search" 
-                className="border-2 border-white text-white px-12 py-5 text-sm tracking-[0.3em] uppercase font-bold hover:bg-white hover:text-black transition-all duration-300 rounded-sm hover:scale-105 transform"
+                className="border border-white/80 bg-white/10 backdrop-blur-sm text-white px-7 py-3 text-xs tracking-[0.2em] uppercase font-medium hover:bg-white hover:text-black transition-all duration-300 rounded-sm"
               >
                 View All Products
               </Link>

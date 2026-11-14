@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -8,6 +9,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     if (!status || !['pending', 'in-progress', 'resolved'].includes(status)) {
       return NextResponse.json({ success: false, error: 'Invalid status' }, { status: 400 });
+    }
+
+    try {
+      const rows = await sql`
+        UPDATE support_requests
+        SET status = ${status}, updated_at = NOW()
+        WHERE id = ${resolvedParams.id}
+        RETURNING *
+      `;
+      if (rows && rows.length > 0) {
+        return NextResponse.json({ success: true, data: rows[0] });
+      }
+    } catch (sqlErr) {
+      console.warn('Direct SQL patch failed, trying Supabase fallback:', sqlErr);
     }
 
     const supabaseAdmin = getSupabaseAdmin();
@@ -33,6 +48,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const resolvedParams = await params;
+
+    try {
+      await sql`
+        DELETE FROM support_requests
+        WHERE id = ${resolvedParams.id}
+      `;
+      return NextResponse.json({ success: true });
+    } catch (sqlErr) {
+      console.warn('Direct SQL delete failed, trying Supabase fallback:', sqlErr);
+    }
+
     const supabaseAdmin = getSupabaseAdmin();
     const { error } = await supabaseAdmin
       .from('support_requests')

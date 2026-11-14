@@ -6,9 +6,17 @@ interface VideoBackgroundProps {
   videoSrc: string;
   children?: React.ReactNode;
   className?: string;
+  overlayClassName?: string;
+  contentClassName?: string;
 }
 
-export default function VideoBackground({ videoSrc, children, className = "" }: VideoBackgroundProps) {
+export default function VideoBackground({ 
+  videoSrc, 
+  children, 
+  className = "",
+  overlayClassName = "bg-gradient-to-t from-black/85 via-black/30 to-black/10",
+  contentClassName = "flex items-end justify-center"
+}: VideoBackgroundProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -33,10 +41,10 @@ export default function VideoBackground({ videoSrc, children, className = "" }: 
       </video>
 
       {/* Overlay for better text readability */}
-      <div className="absolute inset-0 bg-black/40" />
+      <div className={`absolute inset-0 ${overlayClassName}`} />
 
       {/* Content */}
-      <div className="relative z-10 h-full flex items-center justify-center">
+      <div className={`relative z-10 h-full w-full ${contentClassName}`}>
         {children}
       </div>
     </div>

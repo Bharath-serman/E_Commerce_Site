@@ -240,6 +240,16 @@ export class OrderService {
     
     return data;
   }
+
+  static async delete(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  }
 }
 
 // Support request service
